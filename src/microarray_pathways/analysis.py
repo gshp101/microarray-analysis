@@ -7,8 +7,8 @@ from pathlib import Path
 import pandas as pd
 
 from . import de as de_mod
-from . import enrichment, plots, report
-from .geo import ExpressionDataset
+from . import enrichment, plots, report, treatments
+from .geo import DEFAULT_CACHE, ExpressionDataset
 
 
 def analyze(
@@ -22,8 +22,11 @@ def analyze(
     min_abs_lfc: float = 1.0,
     permutations: int = 1000,
     source: str = "",
+    drugs: bool = True,
+    cache_dir: Path = DEFAULT_CACHE,
 ) -> dict[str, pd.DataFrame]:
-    """Run differential expression, ORA and GSEA; write tables, figures and report.html to out_dir/<accession>."""
+    """Run differential expression, ORA and GSEA, and (if `drugs`) the treatment-hypothesis step;
+    write tables, figures and report.html to out_dir/<accession>."""
     out = Path(out_dir) / ds.accession
     out.mkdir(parents=True, exist_ok=True)
     label = label or f"{ds.accession}: {case} vs {control}"
@@ -49,8 +52,20 @@ def analyze(
     ]
     (out / "summary.txt").write_text("\n".join(summary) + "\n")
 
+    drug_res, drug_error = None, ""
+    if drugs:
+        try:
+            drug_res = treatments.treatment_hypotheses(de, gsea, gene_sets, out, cache_dir=cache_dir, fdr=fdr)
+            summary.append(f"drugs acting on pathway genes (KEGG): {len(drug_res['targets'])}; "
+                           f"opposing the change: {int(drug_res['targets']['opposes_change'].sum())}")
+        except Exception as e:  # network or database problems should not lose the pathway report
+            drug_error = f"{type(e).__name__}: {e}"
+            summary.append(f"treatment hypotheses skipped: {drug_error}")
+        (out / "summary.txt").write_text("\n".join(summary) + "\n")
+
     counts = {src: sum(k.startswith(f"{src}:") for k in gene_sets) for src in ("KEGG", "Reactome")}
     report.write_report(out, label, case, control, de, gsea, ora, ds.samples,
                         source=source or ds.accession, notes=ds.notes, fdr=fdr, min_abs_lfc=min_abs_lfc,
-                        gene_set_counts={k: v for k, v in counts.items() if v})
-    return {"genes": de, "ora": ora, "gsea": gsea}
+                        gene_set_counts={k: v for k, v in counts.items() if v},
+                        drugs=drug_res, drug_error=drug_error)
+    return {"genes": de, "ora": ora, "gsea": gsea, **({"drugs": drug_res} if drug_res else {})}
