@@ -38,6 +38,19 @@ def parse_kegg(pathway_list: str, links: str, genes: str, metabolic_only: bool =
         pid = pid.replace("path:", "")
         names[pid] = re.sub(r" - Homo sapiens \(human\)$", "", name)
 
+    symbol = parse_kegg_symbols(genes)
+    sets: dict[str, set[str]] = defaultdict(set)
+    for pid, gid, *_ in _tsv(links):
+        pid = pid.replace("path:", "")
+        if metabolic_only and not is_kegg_metabolic(pid):
+            continue
+        if gid in symbol and pid in names:
+            sets[f"KEGG: {names[pid]}"].add(symbol[gid])
+    return dict(sets)
+
+
+def parse_kegg_symbols(genes: str) -> dict[str, str]:
+    """KEGG gene id (hsa:3101) -> official symbol, from the text of /list/hsa."""
     symbol = {}
     for row in _tsv(genes):
         # hsa:3101 <tab> CDS <tab> location <tab> "HK3, HKIII; hexokinase 3"  (older dumps omit type/location)
@@ -48,15 +61,7 @@ def parse_kegg(pathway_list: str, links: str, genes: str, metabolic_only: bool =
         sym = desc.split(";", 1)[0].split(",", 1)[0].strip()
         if sym:
             symbol[gid] = sym
-
-    sets: dict[str, set[str]] = defaultdict(set)
-    for pid, gid, *_ in _tsv(links):
-        pid = pid.replace("path:", "")
-        if metabolic_only and not is_kegg_metabolic(pid):
-            continue
-        if gid in symbol and pid in names:
-            sets[f"KEGG: {names[pid]}"].add(symbol[gid])
-    return dict(sets)
+    return symbol
 
 
 def is_kegg_metabolic(pid: str) -> bool:

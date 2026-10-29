@@ -15,6 +15,9 @@ pathways are affected.
   separately) and preranked GSEA.
 - Step 4 (HTML report tool): done. One command produces a self-contained HTML report
   from a curated dataset, any GEO series, or your own expression table.
+- Step 5 (treatment hypotheses): done. Ranks existing drugs two ways, drug-target
+  mapping of the changed pathway enzymes (KEGG DRUG) and expression signature
+  reversal (LINCS L1000), and adds them to the report as research leads.
 
 ## Usage
 
@@ -56,7 +59,43 @@ group label) and `notes.txt`, and warns if group sizes differ from the published
 | `pathways_gsea.tsv` / `.png` | preranked GSEA on all genes; NES > 0 means up in the case group |
 | `pathways_ora.tsv` | over-representation of significant up and down genes |
 | `report.html` | self-contained report: plain-language summary, interactive pathway chart, searchable tables, volcano plot, methods and caveats |
+| `drug_target_genes.tsv` | genes driving the shifted pathways (leading edge of FDR < 0.05 pathways, changed the same way) |
+| `drugs_targets.tsv` | KEGG DRUG drugs acting on those genes, with action and whether it opposes the change |
+| `drugs_reversal.tsv` | LINCS L1000 compounds ranked by how strongly their signature reverses the disease |
 | `summary.txt` | sample counts and how many genes and pathways pass |
+
+Add `--no-drugs` to skip the treatment step (it downloads about 20 MB the first time).
+
+## Treatment hypotheses
+
+Two independent ways to go from the shifted pathways to existing drugs. Both give
+leads to research, not treatment advice.
+
+- **Drug targets.** Genes in the GSEA leading edge of a pathway with FDR < 0.05 that are
+  themselves changed (FDR < 0.05) in the same direction are matched to drug targets in
+  KEGG DRUG. A drug "opposes the change" if KEGG describes it as an inhibitor or
+  antagonist and its target went up, or as an activator or agonist and its target went
+  down. Ranked by opposing, then marketed (has a trade name or ATC code), then the summed
+  |t| of the targets it hits. Most enzyme drugs are inhibitors, so diseases where pathways
+  mostly go down (such as the Alzheimer's set) get few opposing drugs.
+- **Signature reversal.** The idea behind the Connectivity Map: the LINCS L1000 consensus
+  signatures (via Enrichr) list, for about 5,400 compounds, the genes each one raises and
+  lowers in cultured cells. For each compound, the mean case-vs-control t of the genes it
+  raises minus that of the genes it lowers, scaled to a z-score; strongly negative means
+  it pushes the disease profile back toward control. Ranked on metabolic pathway genes,
+  with the all-gene score alongside. Genes move in co-regulated groups, so the z-score is
+  a ranking, not a calibrated p-value. L1000 profiles come mostly from cancer cell lines,
+  so they fit tumor data better than brain tissue.
+
+Compounds found by both routes are cross-referenced (`l1000_z_metabolic` in the targets
+table, `known_target_drug` in the reversal table). Tumor vs adjacent normal comparisons
+also pick up differences in tissue make-up (for example fat in breast tissue), and
+reversal scores reflect that too.
+
+Data sources reachable from this project's environment: KEGG REST (rest.kegg.jp) and
+Enrichr (maayanlab.cloud). ChEMBL, DGIdb, Open Targets and the clue.io / SigCom LINCS
+APIs would add interaction types, potencies and cell-line-specific signatures if their
+hosts are allowed later.
 
 Gene sets: KEGG human pathways in the Metabolism category (map numbers below 01100;
 the global overview maps are excluded) and Reactome pathways under "Metabolism"
