@@ -44,6 +44,16 @@ class ExpressionDataset:
         (out / "notes.txt").write_text("\n".join([f"platform: {self.platform}", *self.notes]) + "\n")
         return out
 
+    @classmethod
+    def read(cls, path: str | Path) -> "ExpressionDataset":
+        """Read a dataset written by save()."""
+        path = Path(path)
+        expression = pd.read_csv(path / "expression.tsv.gz", sep="\t", index_col=0)
+        samples = pd.read_csv(path / "samples.tsv", sep="\t", index_col=0, dtype=str)
+        lines = (path / "notes.txt").read_text().splitlines()
+        platform = lines[0].removeprefix("platform: ") if lines else ""
+        return cls(path.name, platform, expression, samples, lines[1:])
+
 
 # ---------------------------------------------------------------- downloading
 

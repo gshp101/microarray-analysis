@@ -3,6 +3,7 @@
     python -m microarray_pathways list
     python -m microarray_pathways load alzheimers_brain --out data/
     python -m microarray_pathways load GSE12345 --group case='tumor' --group control='normal'
+    python -m microarray_pathways analyze alzheimers_brain --out results/
 """
 
 from __future__ import annotations
@@ -55,6 +56,26 @@ def _cmd_load(args: argparse.Namespace) -> int:
     return 1 if mismatch else 0
 
 
+def _cmd_analyze(args: argparse.Namespace) -> int:
+    from . import analysis, pathways
+
+    spec = datasets.get(args.dataset)
+    saved = Path(args.data) / spec.accession
+    if saved.exists():
+        ds = geo.ExpressionDataset.read(saved)
+    else:
+        ds = geo.load_series(spec.accession, spec.rules, platform=spec.platform,
+                             sample_filter=spec.sample_filter, exclude=spec.exclude,
+                             cache_dir=Path(args.cache))
+        ds.save(args.data)
+    sets = pathways.metabolic_gene_sets(tuple(args.sources.split(",")), Path(args.cache))
+    analysis.analyze(ds, spec.case, spec.control, sets, args.out,
+                     label=f"{spec.accession} {spec.case} vs {spec.control}",
+                     permutations=args.permutations)
+    print((Path(args.out) / spec.accession / "summary.txt").read_text(), end="")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="microarray_pathways")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -70,6 +91,15 @@ def main(argv: list[str] | None = None) -> int:
     lp.add_argument("--out", default="data", help="output directory")
     lp.add_argument("--cache", default=str(geo.DEFAULT_CACHE), help="download cache directory")
     lp.set_defaults(func=_cmd_load)
+
+    ap = sub.add_parser("analyze", help="differential expression + metabolic pathway enrichment")
+    ap.add_argument("dataset", help="curated key (see list)")
+    ap.add_argument("--data", default="data", help="where loaded datasets live (loads if missing)")
+    ap.add_argument("--out", default="results", help="output directory")
+    ap.add_argument("--sources", default="kegg,reactome", help="pathway databases, comma separated")
+    ap.add_argument("--permutations", type=int, default=1000, help="GSEA permutations")
+    ap.add_argument("--cache", default=str(geo.DEFAULT_CACHE), help="download cache directory")
+    ap.set_defaults(func=_cmd_analyze)
 
     args = p.parse_args(argv)
     return args.func(args)
