@@ -7,7 +7,7 @@ from pathlib import Path
 import pandas as pd
 
 from . import de as de_mod
-from . import enrichment, plots
+from . import enrichment, plots, report
 from .geo import ExpressionDataset
 
 
@@ -21,8 +21,9 @@ def analyze(
     fdr: float = 0.05,
     min_abs_lfc: float = 1.0,
     permutations: int = 1000,
+    source: str = "",
 ) -> dict[str, pd.DataFrame]:
-    """Run differential expression, ORA and GSEA; write tables and figures to out_dir/<accession>."""
+    """Run differential expression, ORA and GSEA; write tables, figures and report.html to out_dir/<accession>."""
     out = Path(out_dir) / ds.accession
     out.mkdir(parents=True, exist_ok=True)
     label = label or f"{ds.accession}: {case} vs {control}"
@@ -47,4 +48,9 @@ def analyze(
         f"ORA pathways with FDR<0.05: {int((ora['fdr'] < 0.05).sum())}",
     ]
     (out / "summary.txt").write_text("\n".join(summary) + "\n")
+
+    counts = {src: sum(k.startswith(f"{src}:") for k in gene_sets) for src in ("KEGG", "Reactome")}
+    report.write_report(out, label, case, control, de, gsea, ora, ds.samples,
+                        source=source or ds.accession, notes=ds.notes, fdr=fdr, min_abs_lfc=min_abs_lfc,
+                        gene_set_counts={k: v for k, v in counts.items() if v})
     return {"genes": de, "ora": ora, "gsea": gsea}

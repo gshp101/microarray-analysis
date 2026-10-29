@@ -13,7 +13,8 @@ pathways are affected.
 - Step 3 (metabolic pathway enrichment): done. KEGG metabolism + Reactome
   "Metabolism" gene sets, scored by over-representation (ORA, up and down genes
   separately) and preranked GSEA.
-- Step 4 (HTML report tool): not started.
+- Step 4 (HTML report tool): done. One command produces a self-contained HTML report
+  from a curated dataset, any GEO series, or your own expression table.
 
 ## Usage
 
@@ -22,7 +23,15 @@ pathways are affected.
     microarray-pathways load alzheimers_brain      # writes data/GSE5281/
     microarray-pathways load GSE12345 --group case='tumou?r' --group control='normal'
 
-    microarray-pathways analyze alzheimers_brain   # writes results/GSE5281/
+    microarray-pathways report alzheimers_brain    # writes results/GSE5281/report.html
+
+    # any GEO series: give two group rules (regex on sample metadata), case group first
+    microarray-pathways report GSE15852 --group tumor='tumou?r|cancer' --group normal='normal'
+
+    # your own data: expression table (first column gene symbols, one column per sample)
+    # and a sample sheet with "sample" and "group" columns
+    microarray-pathways report --expression expr.tsv --samples samples.tsv \
+        --case AD --control control --name my_study
 
 `load` writes `expression.tsv.gz` (log2, one row per gene), `samples.tsv` (metadata and
 group label) and `notes.txt`, and warns if group sizes differ from the published study.
@@ -38,7 +47,7 @@ group label) and `notes.txt`, and warns if group sizes differ from the published
 
 ## Analysis outputs
 
-`analyze` writes to `results/<GSE>/`:
+`report` (alias `analyze`) writes to `results/<name>/`:
 
 | file | contents |
 |---|---|
@@ -46,6 +55,7 @@ group label) and `notes.txt`, and warns if group sizes differ from the published
 | `volcano.png` | volcano plot (FDR < 0.05 and abs(log2FC) >= 1 highlighted) |
 | `pathways_gsea.tsv` / `.png` | preranked GSEA on all genes; NES > 0 means up in the case group |
 | `pathways_ora.tsv` | over-representation of significant up and down genes |
+| `report.html` | self-contained report: plain-language summary, interactive pathway chart, searchable tables, volcano plot, methods and caveats |
 | `summary.txt` | sample counts and how many genes and pathways pass |
 
 Gene sets: KEGG human pathways in the Metabolism category (map numbers below 01100;
