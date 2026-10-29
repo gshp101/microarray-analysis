@@ -300,12 +300,11 @@ def depmap_section(drugs: dict | None, case: str) -> str:
                   + ".</p>")
     cols = {"gene": "Gene", "direction": "Direction", "log2fc": "log2FC", "frac_lineage": f"Share of {lin} lines",
             "frac_other": "Share of other lines", "fdr": "FDR", "up_and_needed": "Up and needed",
-            "drugs": "KEGG drugs against the change", "pathways": "Pathways"}
+            "drugs": "KEGG drugs against the change"}
 
     def fmt(df):
         return df.assign(up_and_needed=df["up_and_needed"].map(_yes),
-                         drugs=df["drugs"].fillna("").map(lambda v: _short_list(v, 4)),
-                         pathways=df["pathways"].fillna("").map(lambda v: "; ".join(_short(x) for x in str(v).split("; ")[:2])))
+                         drugs=df["drugs"].fillna("").map(lambda v: _short_list(v, 4)))
     shown = dm[(dm["fdr"] < 0.25) | dm["up_and_needed"].astype(bool)] if len(dm) else dm
     table = (_table(fmt(shown.head(60)), cols, "depmap", numeric={"log2fc", "frac_lineage", "frac_other"},
                     pvals={"fdr"}) if len(shown) else
@@ -319,7 +318,7 @@ genes every cell needs, so it reflects selective dependencies. Shares compare {_
 of known tissue (one-sided Fisher test, Benjamini-Hochberg FDR across the pathway genes). A gene that went up and
 that these cells depend on is a stronger target lead than one that only changed, but cell lines in a dish differ from
 tumors, and a dependency in cells does not mean a drug will work in patients. Shown: FDR &lt; 0.25 or up and
-needed. Full table: <code>depmap_dependencies.tsv</code>.</p>
+needed. Full table, with the pathways each gene drives: <code>depmap_dependencies.tsv</code>.</p>
 {table}
 """
 
