@@ -278,6 +278,52 @@ full table, including the direction cross-references: <code>drugs_proximity.tsv<
 """
 
 
+def depmap_section(drugs: dict | None, case: str) -> str:
+    """Pathway genes that tissue-matched DepMap cancer cell lines depend on."""
+    if drugs is None or "depmap_info" not in drugs:
+        return ""
+    info, dm = drugs["depmap_info"], drugs.get("depmap", pd.DataFrame())
+    head = "<h3>Pathway genes that matching cancer cell lines need to grow (DepMap)</h3>"
+    if "skipped" in info:
+        return head + f'<p class="muted">Skipped: {_esc(info["skipped"])}. Give <code>--lineage</code> for cancer data.</p>'
+    lin = info["lineage"].lower()
+    sig = dm[dm["fdr"] < 0.1] if len(dm) else dm
+    upn = dm[dm["up_and_needed"].astype(bool)] if len(dm) else dm
+    intro = (f"<p>{info['lineage_lines']} {_esc(lin)} cancer cell lines in DepMap (of {info['lines']} with a known "
+             f"tissue). <b>{len(sig)}</b> of the {len(dm)} pathway-driving genes are needed by {_esc(lin)} lines "
+             f"more often than by other lines (FDR &lt; 0.1); <b>{len(upn)}</b> went up in {_esc(case)} and are "
+             f"needed by at least 1 in 10 {_esc(lin)} lines.</p>")
+    lead = upn[upn["drugs"].astype(str).str.len() > 0] if len(upn) else upn
+    if len(lead):
+        intro += ("<p>Up, needed, and with a KEGG drug acting against them: "
+                  + ", ".join(f"<b>{_esc(r.gene)}</b> ({_esc(_short_list(r.drugs, 3))})" for r in lead.head(5).itertuples())
+                  + ".</p>")
+    cols = {"gene": "Gene", "direction": "Direction", "log2fc": "log2FC", "frac_lineage": f"Share of {lin} lines",
+            "frac_other": "Share of other lines", "fdr": "FDR", "up_and_needed": "Up and needed",
+            "drugs": "KEGG drugs against the change", "pathways": "Pathways"}
+
+    def fmt(df):
+        return df.assign(up_and_needed=df["up_and_needed"].map(_yes),
+                         drugs=df["drugs"].fillna("").map(lambda v: _short_list(v, 4)),
+                         pathways=df["pathways"].fillna("").map(lambda v: "; ".join(_short(x) for x in str(v).split("; ")[:2])))
+    shown = dm[(dm["fdr"] < 0.25) | dm["up_and_needed"].astype(bool)] if len(dm) else dm
+    table = (_table(fmt(shown.head(60)), cols, "depmap", numeric={"log2fc", "frac_lineage", "frac_other"},
+                    pvals={"fdr"}) if len(shown) else
+             '<p class="card">No pathway gene stands out as a dependency of these cell lines.</p>')
+    return f"""
+{head}
+<div class="card">{intro}</div>
+<p class="muted">DepMap knocks out each gene with CRISPR in about 1,100 cancer cell lines and records which ones the
+cells need to keep growing. The list used here (DepMap 2023 CRISPR gene dependency, via Enrichr) leaves out most
+genes every cell needs, so it reflects selective dependencies. Shares compare {_esc(lin)} lines with all other lines
+of known tissue (one-sided Fisher test, Benjamini-Hochberg FDR across the pathway genes). A gene that went up and
+that these cells depend on is a stronger target lead than one that only changed, but cell lines in a dish differ from
+tumors, and a dependency in cells does not mean a drug will work in patients. Shown: FDR &lt; 0.25 or up and
+needed. Full table: <code>depmap_dependencies.tsv</code>.</p>
+{table}
+"""
+
+
 def _short_list(v, n: int) -> str:
     items = [x for x in str(v).split(", ") if x]
     return ", ".join(items[:n]) + (f" (+{len(items) - n} more)" if len(items) > n else "")
@@ -434,6 +480,7 @@ test, pathways with FDR &lt; 0.25. Full table: <code>pathways_ora.tsv</code>.</p
 
 {treatment_section(drugs, case, drug_error)}
 {proximity_section(drugs)}
+{depmap_section(drugs, case)}
 
 <h2>Genes</h2>
 <div class="two">
@@ -468,6 +515,9 @@ human interactome of Menche et al. (2015; about 13,000 proteins and 137,000 inte
 largest connected component), compared with 1000 random target sets and modules drawn from the same degree bins
 (at least 100 proteins per bin), as in Guney et al. (2016). The interactome is literature-curated, so well studied
 proteins have more known interactions.</li>
+<li><b>Cell line dependencies.</b> DepMap 2023 CRISPR gene dependency sets per cell line (Enrichr library
+<code>DepMap_CRISPR_GeneDependency_CellLines_2023</code>); tissue of each line from its CCLE name. Pathway-driving
+genes tested for being needed more often by lines of the matching tissue (one-sided Fisher exact test).</li>
 </ul>
 <p><b>Caveats.</b> Expression changes suggest, but do not prove, altered pathway activity: enzyme activity also
 depends on protein levels, regulation and metabolite supply. Differences in tissue composition between groups

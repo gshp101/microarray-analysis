@@ -61,13 +61,14 @@ def _cmd_load(args: argparse.Namespace) -> int:
 def _resolve(args: argparse.Namespace):
     """Pick the dataset to analyze: own table, curated dataset, or any GSE with --group rules.
 
-    Returns (dataset, case, control, label, source).
+    Returns (dataset, case, control, label, source, lineage).
     """
     if args.expression:
         if not (args.samples and args.case and args.control):
             raise SystemExit("--expression needs --samples, --case and --control")
         ds = geo.load_table(args.expression, args.samples, name=args.name)
-        return ds, args.case, args.control, args.name or ds.accession, f"user table {args.expression}"
+        return (ds, args.case, args.control, args.name or ds.accession, f"user table {args.expression}",
+                args.lineage)
 
     if not args.dataset:
         raise SystemExit("give a curated dataset, a GSE accession with --group, or --expression/--samples")
@@ -98,17 +99,18 @@ def _resolve(args: argparse.Namespace):
                              exclude=exclude, cache_dir=Path(args.cache))
         ds.save(args.data)
     source = f"GEO {accession}" + (f" ({spec.description})" if spec else "")
-    return ds, case, control, f"{accession}: {case} vs {control}", source
+    lineage = args.lineage or (spec.lineage if spec else None)
+    return ds, case, control, f"{accession}: {case} vs {control}", source, lineage
 
 
 def _cmd_report(args: argparse.Namespace) -> int:
     from . import analysis, pathways
 
-    ds, case, control, label, source = _resolve(args)
+    ds, case, control, label, source, lineage = _resolve(args)
     sets = pathways.metabolic_gene_sets(tuple(args.sources.split(",")), Path(args.cache))
     analysis.analyze(ds, case, control, sets, args.out, label=label,
                      permutations=args.permutations, source=source, drugs=not args.no_drugs,
-                     cache_dir=Path(args.cache))
+                     cache_dir=Path(args.cache), lineage=lineage)
     out = Path(args.out) / ds.accession
     print((out / "summary.txt").read_text(), end="")
     print(f"report: {out / 'report.html'}")
@@ -150,6 +152,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--permutations", type=int, default=1000, help="GSEA permutations")
     ap.add_argument("--no-drugs", action="store_true",
                     help="skip the treatment-hypothesis step (KEGG DRUG targets, LINCS L1000 reversal)")
+    ap.add_argument("--lineage", help="for cancer data: tissue of matching DepMap cell lines, as in CCLE "
+                    "names (LUNG, BREAST, LARGE INTESTINE, PANCREAS, SKIN, ...)")
     ap.add_argument("--cache", default=str(geo.DEFAULT_CACHE), help="download cache directory")
     ap.set_defaults(func=_cmd_report)
 

@@ -21,6 +21,8 @@ pathways are affected.
 - Step 6 (network proximity): done. Ranks KEGG DRUG drugs by how close their targets sit
   to the pathway-driving genes in the human protein interaction network, against
   degree-matched random sets (Guney et al. 2016).
+- Step 7 (cell line dependencies): done. For cancer data, flags pathway-driving genes that
+  DepMap cancer cell lines of the same tissue need to grow, more often than other lines.
 
 ## Usage
 
@@ -38,6 +40,9 @@ pathways are affected.
     # and a sample sheet with "sample" and "group" columns
     microarray-pathways report --expression expr.tsv --samples samples.tsv \
         --case AD --control control --name my_study
+
+    # cancer data: name the tissue of matching DepMap cell lines (curated datasets set it)
+    microarray-pathways report GSE12345 --group tumor='tumou?r' --group normal='normal' --lineage PANCREAS
 
 `load` writes `expression.tsv.gz` (log2, one row per gene), `samples.tsv` (metadata and
 group label) and `notes.txt`, and warns if group sizes differ from the published study.
@@ -66,6 +71,7 @@ group label) and `notes.txt`, and warns if group sizes differ from the published
 | `drugs_targets.tsv` | KEGG DRUG drugs acting on those genes, with action and whether it opposes the change |
 | `drugs_reversal.tsv` | LINCS L1000 compounds ranked by how strongly their signature reverses the disease |
 | `drugs_proximity.tsv` | KEGG DRUG drugs ranked by network proximity z of their targets to the pathway-driving genes |
+| `depmap_dependencies.tsv` | pathway-driving genes: share of tissue-matched vs other DepMap cell lines that depend on them |
 | `summary.txt` | sample counts and how many genes and pathways pass |
 
 Add `--no-drugs` to skip the treatment and proximity steps (they download about 22 MB the first time).
@@ -106,6 +112,19 @@ reversal scores reflect that too.
   the enzymes themselves, but says nothing about direction, so check `opposes_change`
   and `l1000_z_metabolic` in `drugs_proximity.tsv`. The interactome is
   literature-curated, so well studied proteins carry more known interactions.
+
+- **Cell line dependencies (DepMap).** For cancer data with a `--lineage` (curated: LUNG,
+  BREAST, LARGE INTESTINE; none for the Alzheimer's set), each pathway-driving gene is
+  checked against the DepMap 2023 CRISPR gene dependency sets (via Enrichr, which leaves
+  out most genes every cell needs). It reports the share of tissue-matched lines that
+  depend on the gene, the share of other lines, and a one-sided Fisher test. "Up and
+  needed" marks genes that went up in the disease and that at least 1 in 10 matching
+  lines need, more often than other lines; KEGG drugs acting against the change are listed
+  beside them. Cell line tissue comes from CCLE names, which cover about 620 of the 1,093
+  lines. This is a target-priority signal, not synthetic lethality in the strict sense
+  (that needs paired knockouts). The DepMap portal and figshare are not reachable from this
+  environment; with them, the continuous Chronos gene effect scores and Model.csv
+  annotations would replace the Enrichr sets.
 
 Data sources reachable from this project's environment: KEGG REST (rest.kegg.jp) and
 Enrichr (maayanlab.cloud), plus raw.githubusercontent.com for the interactome. ChEMBL, DGIdb, Open Targets and the clue.io / SigCom LINCS
