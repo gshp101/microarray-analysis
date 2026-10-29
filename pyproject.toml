@@ -1,0 +1,22 @@
+[project]
+name = "microarray-pathways"
+version = "0.1.0"
+description = "Find metabolic pathways affected in public gene expression microarray studies"
+requires-python = ">=3.10"
+dependencies = ["numpy", "pandas", "requests", "scipy", "statsmodels"]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+microarray-pathways = "microarray_pathways.cli:main"
+
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
