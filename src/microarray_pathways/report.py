@@ -132,6 +132,87 @@ def _table(df: pd.DataFrame, cols: dict[str, str], table_id: str, numeric: set[s
             f'<tbody>{"".join(rows)}</tbody></table></div></div>')
 
 
+def _yes(v) -> str:
+    return "yes" if bool(v) and not pd.isna(v) else ""
+
+
+def treatment_section(drugs: dict | None, case: str, error: str = "") -> str:
+    """Ranked drug candidates from both routes, framed as research leads."""
+    warn = ('<div class="card warn"><b>Research leads, not treatment advice.</b> These lists come from '
+            'matching gene expression to drug databases. A drug that acts on a changed enzyme, or whose '
+            'signature in cultured cells looks like the opposite of the disease, may still do nothing, or '
+            'harm, in patients: tissue, dose, toxicity and the direction of cause and effect are all '
+            'untested here. Each lead needs literature review and lab work before anything else.</div>')
+    if drugs is None:
+        why = f" ({_esc(error)})" if error else " (run without <code>--no-drugs</code> to include it)"
+        return f'<h2>Treatment hypotheses</h2><p class="muted">This step was skipped{why}.</p>'
+    genes, targets, rev = drugs["genes"], drugs["targets"], drugs["reversal"]
+    opp = targets[targets["opposes_change"].astype(bool)] if len(targets) else targets
+    n_up = int((genes["direction"] == "up").sum()) if len(genes) else 0
+    intro = (f"<p><b>{len(genes)}</b> genes drive the shifted pathways ({n_up} up, {len(genes) - n_up} down in "
+             f"{_esc(case)}). KEGG lists <b>{len(targets)}</b> drugs acting on them, of which <b>{len(opp)}</b> "
+             f"act in the direction that would push the change back.</p>")
+    if len(opp):
+        top = opp.head(5)["drug"].tolist()
+        intro += f"<p>Strongest target-based leads: {_list(top)}.</p>"
+    clin = rev[rev["clinical_drug"].astype(bool)] if len(rev) else rev
+    if len(clin):
+        intro += (f"<p>Clinical drugs whose L1000 signature best reverses the metabolic profile: "
+                  f"{_list(clin.head(5)['compound'].tolist())}.</p>")
+
+    def short_paths(v) -> str:
+        p = [_short(x) for x in str(v).split("; ") if x]
+        return "; ".join(p[:3]) + (f" (+{len(p) - 3} more)" if len(p) > 3 else "")
+
+    def fmt_targets(df):
+        return df.assign(opposes_change=df["opposes_change"].map(_yes), marketed=df["marketed"].map(_yes),
+                         pathways=df["pathways"].map(short_paths))
+
+    tcols = {"drug": "Drug", "action": "Action", "targets": "Targets (log2FC)", "marketed": "Marketed",
+             "l1000_z_metabolic": "L1000 z", "pathways": "Pathways", "efficacy": "KEGG efficacy"}
+    target_html = (_table(fmt_targets(opp.head(40)), tcols, "drugtargets", numeric={"l1000_z_metabolic"})
+                   if len(opp) else '<p class="card">No KEGG drug acts against the changed pathway genes.</p>')
+    rest = targets[~targets["opposes_change"].astype(bool)] if len(targets) else targets
+    rest_html = (f'<details><summary>Other drugs acting on these genes ({len(rest)}: action unclear or '
+                 f'same direction as the change)</summary>'
+                 f'{_table(fmt_targets(rest.head(60)), {**tcols, "opposes_change": "Opposes"}, "drugother", numeric={"l1000_z_metabolic"})}'
+                 f'</details>') if len(rest) else ""
+
+    rcols = {"compound": "Compound", "z_metabolic": "Metabolic z", "percentile_metabolic": "Percentile",
+             "z_all": "All-gene z", "reversed_genes": "Pathway genes pushed back"}
+    rev_fmt = rev.assign(clinical_drug=rev["clinical_drug"].map(_yes)) if len(rev) else rev
+    rev_html = (_table(rev_fmt[rev_fmt["clinical_drug"] == "yes"].head(25), rcols, "revclin",
+                       numeric={"z_metabolic", "percentile_metabolic", "z_all"})
+                + '<details><summary>All compounds, including research tools</summary>'
+                + _table(rev_fmt.head(60), {**rcols, "clinical_drug": "Clinical drug"}, "revall",
+                         numeric={"z_metabolic", "percentile_metabolic", "z_all"})
+                + "</details>") if len(rev) else '<p class="card">No compound signatures could be scored.</p>'
+
+    return f"""
+<h2>Treatment hypotheses</h2>
+{warn}
+<div class="card" style="margin-top:12px">{intro}</div>
+
+<h3>Drugs that act on the changed enzymes</h3>
+<p class="muted">Genes in the leading edge of a pathway with FDR &lt; 0.05 that are themselves changed (FDR &lt; 0.05)
+the same way, matched to drug targets in KEGG DRUG. Listed when the drug inhibits a gene that went up or activates
+one that went down; ranked by marketed status, then by how strongly its targets changed. "L1000 z" is the same
+drug's signature score below, when it was profiled (negative = reverses). Full table: <code>drugs_targets.tsv</code>;
+genes: <code>drug_target_genes.tsv</code>.</p>
+{target_html}
+{rest_html}
+
+<h3>Compounds whose expression signature reverses the disease</h3>
+<p class="muted">LINCS L1000 consensus signatures: for ~5,400 compounds, the genes each one raises and lowers in
+cultured human cell lines. Metabolic z compares the compound's raised genes with its lowered genes on the
+{_esc(case)} vs control t statistic, over metabolic pathway genes only; more negative means the compound pushes
+those genes back toward control. All-gene z is the same over every gene. Percentile is the share of all compounds
+that reverse less strongly. Genes move in co-regulated groups, so treat z as a ranking, not a p-value. Arrows show
+how the compound moves each gene. Full table: <code>drugs_reversal.tsv</code>.</p>
+{rev_html}
+"""
+
+
 def _img(path: Path, alt: str) -> str:
     if not path.exists():
         return ""
@@ -190,7 +271,9 @@ img{max-width:100%;height:auto;border-radius:8px;background:#fff}
 .two .card{padding:8px}.more{color:var(--accent);white-space:nowrap}
 @media (max-width:760px){.two{grid-template-columns:1fr}}
 details{margin-top:10px}summary{cursor:pointer;color:var(--accent)}
-.muted{color:var(--ink2);font-size:13px}code{font-size:13px}
+.muted{color:var(--ink2);font-size:13px}h3{font-size:16px;margin:26px 0 6px}
+.card.warn{border-color:var(--up);background:var(--upbg)}.card>p:first-child{margin-top:0}
+.card>p:last-child{margin-bottom:0}code{font-size:13px}
 .chartwrap{overflow-x:auto}.chartwrap .chart{min-width:620px}
 @media (max-width:500px){.stat b{font-size:19px}h1{font-size:22px}}
 """
@@ -221,6 +304,8 @@ def write_report(
     fdr: float = 0.05,
     min_abs_lfc: float = 1.0,
     gene_set_counts: dict[str, int] | None = None,
+    drugs: dict | None = None,
+    drug_error: str = "",
 ) -> Path:
     """Write report.html into out_dir (which already holds the figures and TSVs)."""
     out = Path(out_dir)
@@ -277,6 +362,8 @@ test, pathways with FDR &lt; 0.25. Full table: <code>pathways_ora.tsv</code>.</p
   '<p class="card">No pathway passes FDR &lt; 0.25 by over-representation. This is common when '
   'changes are spread across many genes; GSEA above is more sensitive to that.</p>'}
 
+{treatment_section(drugs, case, drug_error)}
+
 <h2>Genes</h2>
 <div class="two">
  <div class="card">{_img(out / "volcano.png", "Volcano plot of log2 fold change against p-value")}</div>
@@ -299,6 +386,12 @@ Reactome pathways under Metabolism, minus sets made mostly of ribosomal, proteas
 means the pathway's genes sit toward the {_esc(case)}-high end.</li>
 <li><b>Over-representation.</b> Hypergeometric test of up and down genes separately against all measured
 genes that belong to a pathway.</li>
+<li><b>Treatment hypotheses.</b> Drug targets and actions from KEGG DRUG (action read from KEGG's efficacy text,
+so a drug with several targets gets one action for all of them). Signature reversal against the LINCS L1000
+chemical perturbation consensus signatures (Enrichr library <code>LINCS_L1000_Chem_Pert_Consensus_Sigs</code>),
+scored as the difference in mean t between each compound's up and down genes. "Clinical drug" means KEGG DRUG lists
+the compound under an official drug name (INN, USAN, JAN), a pharmacopoeia or a trade name. L1000 profiles come
+from cancer and other cell lines, so they fit tumor data better than brain or other tissues.</li>
 </ul>
 <p><b>Caveats.</b> Expression changes suggest, but do not prove, altered pathway activity: enzyme activity also
 depends on protein levels, regulation and metabolite supply. Differences in tissue composition between groups

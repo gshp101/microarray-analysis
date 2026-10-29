@@ -107,7 +107,8 @@ def _cmd_report(args: argparse.Namespace) -> int:
     ds, case, control, label, source = _resolve(args)
     sets = pathways.metabolic_gene_sets(tuple(args.sources.split(",")), Path(args.cache))
     analysis.analyze(ds, case, control, sets, args.out, label=label,
-                     permutations=args.permutations, source=source)
+                     permutations=args.permutations, source=source, drugs=not args.no_drugs,
+                     cache_dir=Path(args.cache))
     out = Path(args.out) / ds.accession
     print((out / "summary.txt").read_text(), end="")
     print(f"report: {out / 'report.html'}")
@@ -147,6 +148,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", default="results", help="output directory")
     ap.add_argument("--sources", default="kegg,reactome", help="pathway databases, comma separated")
     ap.add_argument("--permutations", type=int, default=1000, help="GSEA permutations")
+    ap.add_argument("--no-drugs", action="store_true",
+                    help="skip the treatment-hypothesis step (KEGG DRUG targets, LINCS L1000 reversal)")
     ap.add_argument("--cache", default=str(geo.DEFAULT_CACHE), help="download cache directory")
     ap.set_defaults(func=_cmd_report)
 
