@@ -62,10 +62,14 @@ def test_assign_groups():
     assert g.tolist() == ["alzheimers", "control", "alzheimers"]
 
 
-def test_lung_rules_do_not_confuse_non_tumor():
-    samples = pd.DataFrame({"characteristics_ch1": ["Tissue: Tumor", "Tissue: Non-Tumor", "Tissue: non tumor"]})
+def test_lung_rules_match_real_gse10072_metadata():
+    # titles/sources as they appear in the GSE10072 series matrix
+    samples = pd.DataFrame({
+        "title": ["Lung Tumor_GT00006", "Normal Lung_GT00006"],
+        "source_name_ch1": ["Adenocarcinoma of the Lung", "Normal Lung Tissue"],
+    })
     g = geo.assign_groups(samples, DATASETS["lung_adenocarcinoma"].rules)
-    assert g.tolist() == ["tumor", "normal", "normal"]
+    assert g.tolist() == ["tumor", "normal"]
 
 
 def test_prefix_dir():

@@ -6,10 +6,14 @@ pathways are affected.
 
 ## Status
 
-- Step 1 (load datasets): loader written and unit tested; real downloads need network
-  access to NCBI GEO.
-- Step 2 (differential expression), step 3 (metabolic pathway enrichment) and
-  step 4 (HTML report tool): not started.
+- Step 1 (load datasets): done; all four curated datasets load with the group sizes
+  reported by the original studies.
+- Step 2 (differential expression): done. Welch t-test per gene, log2 fold change,
+  Benjamini-Hochberg FDR, volcano plot.
+- Step 3 (metabolic pathway enrichment): done. KEGG metabolism + Reactome
+  "Metabolism" gene sets, scored by over-representation (ORA, up and down genes
+  separately) and preranked GSEA.
+- Step 4 (HTML report tool): not started.
 
 ## Usage
 
@@ -17,6 +21,8 @@ pathways are affected.
     microarray-pathways list                       # curated datasets
     microarray-pathways load alzheimers_brain      # writes data/GSE5281/
     microarray-pathways load GSE12345 --group case='tumou?r' --group control='normal'
+
+    microarray-pathways analyze alzheimers_brain   # writes results/GSE5281/
 
 `load` writes `expression.tsv.gz` (log2, one row per gene), `samples.tsv` (metadata and
 group label) and `notes.txt`, and warns if group sizes differ from the published study.
@@ -29,3 +35,26 @@ group label) and `notes.txt`, and warns if group sizes differ from the published
 | lung_adenocarcinoma | GSE10072 | lung adenocarcinoma vs non-tumor |
 | breast_cancer | GSE15852 | breast tumor vs adjacent normal |
 | colorectal_cancer | GSE32323 | colorectal cancer vs paired normal |
+
+## Analysis outputs
+
+`analyze` writes to `results/<GSE>/`:
+
+| file | contents |
+|---|---|
+| `genes.tsv` | every gene: log2fc, group means, t, p-value, FDR |
+| `volcano.png` | volcano plot (FDR < 0.05 and abs(log2FC) >= 1 highlighted) |
+| `pathways_gsea.tsv` / `.png` | preranked GSEA on all genes; NES > 0 means up in the case group |
+| `pathways_ora.tsv` | over-representation of significant up and down genes |
+| `summary.txt` | sample counts and how many genes and pathways pass |
+
+Gene sets: KEGG human pathways in the Metabolism category (map numbers below 01100;
+the global overview maps are excluded) and Reactome pathways under "Metabolism"
+(R-HSA-1430728). Reactome sets made up mostly of ribosomal proteins, proteasome
+subunits or nucleoporins (e.g. "Selenocysteine synthesis", "Regulation of ODC") are
+dropped by default, since they track general protein machinery rather than
+metabolic enzymes.
+
+Caveats: the tests treat samples as independent. GSE15852 and GSE32323 are paired
+tumor/normal designs and GSE5281 has several brain regions per donor, so a paired or
+mixed model would be somewhat more powerful.
