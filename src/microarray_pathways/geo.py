@@ -220,6 +220,39 @@ def assign_groups(samples: pd.DataFrame, rules: dict[str, str]) -> pd.Series:
     return group
 
 
+def load_table(expression: str | Path, samples: str | Path, name: str | None = None) -> ExpressionDataset:
+    """Load your own data: an expression table and a sample sheet.
+
+    expression: CSV/TSV, first column gene symbols, one column per sample
+        (log2 or linear; linear values are log2-transformed). Repeated gene
+        symbols are collapsed to the row with the highest mean.
+    samples: CSV/TSV with a column of sample names matching the expression
+        columns ("sample", or the first column) and a "group" column.
+    """
+    sep = lambda p: "," if str(p).lower().endswith((".csv", ".csv.gz")) else "\t"
+    expr = pd.read_csv(expression, sep=sep(expression), index_col=0)
+    expr.index = expr.index.astype(str).str.strip()
+    expr = expr.apply(pd.to_numeric, errors="coerce")
+    sheet = pd.read_csv(samples, sep=sep(samples), dtype=str)
+    sheet = sheet.set_index("sample" if "sample" in sheet.columns else sheet.columns[0])
+    if "group" not in sheet.columns:
+        raise ValueError(f"{samples} needs a 'group' column; found {list(sheet.columns)}")
+    missing = [s for s in sheet.index if s not in expr.columns]
+    if missing:
+        raise ValueError(f"samples not found in {expression}: {missing[:5]}")
+    expr = expr[list(sheet.index)]
+    notes = [f"source: {expression}", f"rows: {len(expr)}"]
+    if needs_log2(expr):
+        expr = np.log2(expr.clip(lower=1))
+        notes.append("values looked linear; applied log2")
+    symbols = pd.Series(expr.index.to_numpy(), index=[f"row{i}" for i in range(len(expr))])
+    expr.index = symbols.index  # gene symbols may repeat; collapse by row position
+    genes = collapse_to_genes(expr, symbols)
+    notes.append(f"genes: {len(genes)}")
+    notes.append(f"group counts: {sheet['group'].value_counts().to_dict()}")
+    return ExpressionDataset(name or Path(expression).name.split(".")[0], "user", genes, sheet, notes)
+
+
 def load_series(
     gse: str,
     rules: dict[str, str],

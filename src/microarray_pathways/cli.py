@@ -3,7 +3,9 @@
     python -m microarray_pathways list
     python -m microarray_pathways load alzheimers_brain --out data/
     python -m microarray_pathways load GSE12345 --group case='tumor' --group control='normal'
-    python -m microarray_pathways analyze alzheimers_brain --out results/
+    python -m microarray_pathways report alzheimers_brain
+    python -m microarray_pathways report GSE12345 --group tumor='tumou?r' --group normal='normal'
+    python -m microarray_pathways report --expression expr.tsv --samples samples.tsv --case AD --control CTL
 """
 
 from __future__ import annotations
@@ -56,23 +58,59 @@ def _cmd_load(args: argparse.Namespace) -> int:
     return 1 if mismatch else 0
 
 
-def _cmd_analyze(args: argparse.Namespace) -> int:
-    from . import analysis, pathways
+def _resolve(args: argparse.Namespace):
+    """Pick the dataset to analyze: own table, curated dataset, or any GSE with --group rules.
 
-    spec = datasets.get(args.dataset)
-    saved = Path(args.data) / spec.accession
-    if saved.exists():
+    Returns (dataset, case, control, label, source).
+    """
+    if args.expression:
+        if not (args.samples and args.case and args.control):
+            raise SystemExit("--expression needs --samples, --case and --control")
+        ds = geo.load_table(args.expression, args.samples, name=args.name)
+        return ds, args.case, args.control, args.name or ds.accession, f"user table {args.expression}"
+
+    if not args.dataset:
+        raise SystemExit("give a curated dataset, a GSE accession with --group, or --expression/--samples")
+    try:
+        spec = None if args.group else datasets.get(args.dataset)
+    except KeyError:
+        raise SystemExit(f"{args.dataset} is not a curated dataset; pass --group NAME=REGEX twice "
+                         "(case group first)")
+    if spec:
+        accession, rules, case, control = spec.accession, spec.rules, spec.case, spec.control
+        platform, sample_filter, exclude = spec.platform, spec.sample_filter, spec.exclude
+    else:
+        rules = dict(g.split("=", 1) for g in args.group)
+        if len(rules) != 2:
+            raise SystemExit("pass exactly two --group NAME=REGEX rules, case group first")
+        accession = args.dataset.upper()
+        case, control = list(rules)
+        platform, sample_filter, exclude = None, None, None
+    platform = args.platform or platform
+    sample_filter = args.filter or sample_filter
+    exclude = args.exclude or exclude
+
+    saved = Path(args.data) / accession
+    if spec and saved.exists() and not (args.platform or args.filter or args.exclude):
         ds = geo.ExpressionDataset.read(saved)
     else:
-        ds = geo.load_series(spec.accession, spec.rules, platform=spec.platform,
-                             sample_filter=spec.sample_filter, exclude=spec.exclude,
-                             cache_dir=Path(args.cache))
+        ds = geo.load_series(accession, rules, platform=platform, sample_filter=sample_filter,
+                             exclude=exclude, cache_dir=Path(args.cache))
         ds.save(args.data)
+    source = f"GEO {accession}" + (f" ({spec.description})" if spec else "")
+    return ds, case, control, f"{accession}: {case} vs {control}", source
+
+
+def _cmd_report(args: argparse.Namespace) -> int:
+    from . import analysis, pathways
+
+    ds, case, control, label, source = _resolve(args)
     sets = pathways.metabolic_gene_sets(tuple(args.sources.split(",")), Path(args.cache))
-    analysis.analyze(ds, spec.case, spec.control, sets, args.out,
-                     label=f"{spec.accession} {spec.case} vs {spec.control}",
-                     permutations=args.permutations)
-    print((Path(args.out) / spec.accession / "summary.txt").read_text(), end="")
+    analysis.analyze(ds, case, control, sets, args.out, label=label,
+                     permutations=args.permutations, source=source)
+    out = Path(args.out) / ds.accession
+    print((out / "summary.txt").read_text(), end="")
+    print(f"report: {out / 'report.html'}")
     return 0
 
 
@@ -92,14 +130,25 @@ def main(argv: list[str] | None = None) -> int:
     lp.add_argument("--cache", default=str(geo.DEFAULT_CACHE), help="download cache directory")
     lp.set_defaults(func=_cmd_load)
 
-    ap = sub.add_parser("analyze", help="differential expression + metabolic pathway enrichment")
-    ap.add_argument("dataset", help="curated key (see list)")
-    ap.add_argument("--data", default="data", help="where loaded datasets live (loads if missing)")
+    ap = sub.add_parser("report", aliases=["analyze"],
+                        help="differential expression + metabolic pathways + HTML report")
+    ap.add_argument("dataset", nargs="?", help="curated key (see list) or a GSE accession")
+    ap.add_argument("--group", action="append", metavar="NAME=REGEX",
+                    help="for any GSE: group rule matched against sample metadata; give two, case first")
+    ap.add_argument("--platform", help="GPL id for multi-platform series")
+    ap.add_argument("--filter", help="keep only samples whose metadata matches this regex")
+    ap.add_argument("--exclude", help="drop samples whose metadata matches this regex")
+    ap.add_argument("--expression", help="your own expression table (genes x samples, CSV/TSV)")
+    ap.add_argument("--samples", help="sample sheet for --expression with 'sample' and 'group' columns")
+    ap.add_argument("--case", help="case group name in the sample sheet")
+    ap.add_argument("--control", help="control group name in the sample sheet")
+    ap.add_argument("--name", help="name for the output folder and report title (own table)")
+    ap.add_argument("--data", default="data", help="where loaded GEO datasets are saved")
     ap.add_argument("--out", default="results", help="output directory")
     ap.add_argument("--sources", default="kegg,reactome", help="pathway databases, comma separated")
     ap.add_argument("--permutations", type=int, default=1000, help="GSEA permutations")
     ap.add_argument("--cache", default=str(geo.DEFAULT_CACHE), help="download cache directory")
-    ap.set_defaults(func=_cmd_analyze)
+    ap.set_defaults(func=_cmd_report)
 
     args = p.parse_args(argv)
     return args.func(args)
