@@ -7,7 +7,7 @@ from pathlib import Path
 import pandas as pd
 
 from . import de as de_mod
-from . import enrichment, plots, report, treatments
+from . import enrichment, plots, proximity, report, treatments
 from .geo import DEFAULT_CACHE, ExpressionDataset
 
 
@@ -61,6 +61,17 @@ def analyze(
         except Exception as e:  # network or database problems should not lose the pathway report
             drug_error = f"{type(e).__name__}: {e}"
             summary.append(f"treatment hypotheses skipped: {drug_error}")
+        if drug_res is not None:
+            try:
+                drug_res.update(proximity.proximity_hypotheses(
+                    de, gsea, out, genes=drug_res["genes"], targets=drug_res["targets"],
+                    reversal=drug_res["reversal"], cache_dir=cache_dir, fdr=fdr))
+                prox = drug_res["proximity"]
+                summary.append(f"drugs scored by network proximity: {len(prox)}; "
+                               f"z < -2: {int((prox['z'] < -2).sum())}")
+            except Exception as e:
+                drug_res["proximity_error"] = f"{type(e).__name__}: {e}"
+                summary.append(f"network proximity skipped: {drug_res['proximity_error']}")
         (out / "summary.txt").write_text("\n".join(summary) + "\n")
 
     counts = {src: sum(k.startswith(f"{src}:") for k in gene_sets) for src in ("KEGG", "Reactome")}
