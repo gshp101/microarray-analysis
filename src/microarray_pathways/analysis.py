@@ -7,7 +7,7 @@ from pathlib import Path
 import pandas as pd
 
 from . import de as de_mod
-from . import enrichment, plots, proximity, report, treatments
+from . import depmap, enrichment, plots, proximity, report, treatments
 from .geo import DEFAULT_CACHE, ExpressionDataset
 
 
@@ -24,9 +24,13 @@ def analyze(
     source: str = "",
     drugs: bool = True,
     cache_dir: Path = DEFAULT_CACHE,
+    lineage: str | None = None,
 ) -> dict[str, pd.DataFrame]:
-    """Run differential expression, ORA and GSEA, and (if `drugs`) the treatment-hypothesis step;
-    write tables, figures and report.html to out_dir/<accession>."""
+    """Run differential expression, ORA and GSEA, and (if `drugs`) the treatment-hypothesis steps;
+    write tables, figures and report.html to out_dir/<accession>.
+
+    `lineage` is the tissue of matching cancer cell lines (CCLE naming, e.g. "LUNG") for the
+    DepMap dependency check; leave it out for non-cancer data."""
     out = Path(out_dir) / ds.accession
     out.mkdir(parents=True, exist_ok=True)
     label = label or f"{ds.accession}: {case} vs {control}"
@@ -72,6 +76,19 @@ def analyze(
             except Exception as e:
                 drug_res["proximity_error"] = f"{type(e).__name__}: {e}"
                 summary.append(f"network proximity skipped: {drug_res['proximity_error']}")
+            try:
+                drug_res.update(depmap.dependency_hypotheses(drug_res["genes"], lineage, out,
+                                                             targets=drug_res["targets"], cache_dir=cache_dir))
+                dm, info = drug_res["depmap"], drug_res["depmap_info"]
+                if "skipped" in info:
+                    summary.append(f"DepMap dependencies skipped: {info['skipped']}")
+                else:
+                    summary.append(f"DepMap {info['lineage']} lines: {info['lineage_lines']}; pathway genes "
+                                   f"they need more than other lines (FDR<0.1): {int((dm['fdr'] < 0.1).sum())}; "
+                                   f"up and needed: {int(dm['up_and_needed'].sum())}")
+            except Exception as e:
+                drug_res["depmap_info"] = {"skipped": f"{type(e).__name__}: {e}"}
+                summary.append(f"DepMap dependencies skipped: {drug_res['depmap_info']['skipped']}")
         (out / "summary.txt").write_text("\n".join(summary) + "\n")
 
     counts = {src: sum(k.startswith(f"{src}:") for k in gene_sets) for src in ("KEGG", "Reactome")}

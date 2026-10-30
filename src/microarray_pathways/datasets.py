@@ -27,6 +27,7 @@ class DatasetSpec:
     verified: bool = False
     reference: str = ""
     tags: tuple[str, ...] = field(default_factory=tuple)
+    lineage: str | None = None  # tissue of matching cancer cell lines in DepMap/CCLE, e.g. "LUNG"
 
 
 DATASETS: dict[str, DatasetSpec] = {
@@ -58,6 +59,7 @@ DATASETS: dict[str, DatasetSpec] = {
             verified=True,
             reference="Landi et al. 2008, PLoS One; PMID 18297132",
             tags=("cancer", "lung"),
+            lineage="LUNG",
         ),
         DatasetSpec(
             key="breast_cancer",
@@ -71,6 +73,7 @@ DATASETS: dict[str, DatasetSpec] = {
             verified=True,
             reference="Ni et al. 2010, Breast Cancer Res Treat; PMID 20097481",
             tags=("cancer", "breast"),
+            lineage="BREAST",
         ),
         DatasetSpec(
             key="colorectal_cancer",
@@ -85,6 +88,7 @@ DATASETS: dict[str, DatasetSpec] = {
             verified=True,
             reference="Khamas et al. 2012, Anticancer Res; PMID 23155247",
             tags=("cancer", "colorectal"),
+            lineage="LARGE INTESTINE",
         ),
     ]
 }
