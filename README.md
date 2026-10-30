@@ -18,6 +18,9 @@ pathways are affected.
 - Step 5 (treatment hypotheses): done. Ranks existing drugs two ways, drug-target
   mapping of the changed pathway enzymes (KEGG DRUG) and expression signature
   reversal (LINCS L1000), and adds them to the report as research leads.
+- Step 6 (network proximity): done. Ranks KEGG DRUG drugs by how close their targets sit
+  to the pathway-driving genes in the human protein interaction network, against
+  degree-matched random sets (Guney et al. 2016).
 
 ## Usage
 
@@ -62,9 +65,10 @@ group label) and `notes.txt`, and warns if group sizes differ from the published
 | `drug_target_genes.tsv` | genes driving the shifted pathways (leading edge of FDR < 0.05 pathways, changed the same way) |
 | `drugs_targets.tsv` | KEGG DRUG drugs acting on those genes, with action and whether it opposes the change |
 | `drugs_reversal.tsv` | LINCS L1000 compounds ranked by how strongly their signature reverses the disease |
+| `drugs_proximity.tsv` | KEGG DRUG drugs ranked by network proximity z of their targets to the pathway-driving genes |
 | `summary.txt` | sample counts and how many genes and pathways pass |
 
-Add `--no-drugs` to skip the treatment step (it downloads about 20 MB the first time).
+Add `--no-drugs` to skip the treatment and proximity steps (they download about 22 MB the first time).
 
 ## Treatment hypotheses
 
@@ -92,8 +96,19 @@ table, `known_target_drug` in the reversal table). Tumor vs adjacent normal comp
 also pick up differences in tissue make-up (for example fat in breast tissue), and
 reversal scores reflect that too.
 
+- **Network proximity.** The pathway-driving genes form the disease module. For each
+  drug, the closest distance is the mean, over its targets, of the shortest path in the
+  human interactome (Menche et al. 2015, the network used by Guney et al. 2016; fetched
+  from the paper's GitHub repository) to the nearest module gene. It is compared with
+  1000 random target sets and modules drawn from the same degree bins and reported as a
+  z-score; z < -2 means closer than chance. This catches drugs that act on neighbours
+  of the changed enzymes (regulators, transporters, signalling partners) rather than on
+  the enzymes themselves, but says nothing about direction, so check `opposes_change`
+  and `l1000_z_metabolic` in `drugs_proximity.tsv`. The interactome is
+  literature-curated, so well studied proteins carry more known interactions.
+
 Data sources reachable from this project's environment: KEGG REST (rest.kegg.jp) and
-Enrichr (maayanlab.cloud). ChEMBL, DGIdb, Open Targets and the clue.io / SigCom LINCS
+Enrichr (maayanlab.cloud), plus raw.githubusercontent.com for the interactome. ChEMBL, DGIdb, Open Targets and the clue.io / SigCom LINCS
 APIs would add interaction types, potencies and cell-line-specific signatures if their
 hosts are allowed later.
 

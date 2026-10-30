@@ -213,6 +213,76 @@ how the compound moves each gene. Full table: <code>drugs_reversal.tsv</code>.</
 """
 
 
+def proximity_section(drugs: dict | None) -> str:
+    """Drugs ranked by how close their targets sit to the pathway genes in the interaction network."""
+    if drugs is None:
+        return ""
+    if "proximity" not in drugs:
+        err = drugs.get("proximity_error", "")
+        return (f'<h3>Drugs whose targets sit close to the pathway genes in the protein network</h3>'
+                f'<p class="muted">Network proximity was skipped{" (" + _esc(err) + ")" if err else ""}.</p>')
+    prox, info = drugs["proximity"], drugs.get("proximity_info", {})
+    clin = prox[prox["clinical"].astype(bool)] if len(prox) else prox
+    near = clin[clin["z"] < -2] if len(clin) else clin
+    indirect = near[near["n_targets_in_module"] == 0] if len(near) else near
+    intro = (f"<p>{info.get('module_genes', 0)} of the {info.get('pathway_genes', 0)} pathway-driving genes are in "
+             f"the interaction network. Of <b>{len(clin)}</b> clinical drugs with targets in the network, "
+             f"<b>{len(near)}</b> sit closer to them than chance (z &lt; -2), <b>{len(indirect)}</b> of those "
+             f"without hitting a pathway gene directly.</p>")
+    if len(indirect):
+        intro += f"<p>Closest drugs that act through neighbouring proteins: {_list(indirect.drop_duplicates('targets').head(5)['drug'].tolist())}.</p>"
+
+    cols = {"drug": "Drug", "z": "Proximity z", "d_closest": "Distance", "d_random_mean": "Random distance",
+            "n_targets_in_module": "Targets in module", "targets": "Targets (module genes first)"}
+    numeric = {"z", "d_closest", "d_random_mean", "l1000_z_metabolic"}
+    if "opposes_change" in prox:
+        cols["opposes_change"] = "Opposes change (KEGG)"
+    if "l1000_z_metabolic" in prox:
+        cols["l1000_z_metabolic"] = "L1000 z"
+
+    def fmt(df):
+        # drugs with the same targets get the same score; show them as one row
+        df = df.copy()
+        if "opposes_change" in df:
+            df["opposes_change"] = df["opposes_change"].map(_yes)
+        groups = df.groupby("targets", sort=False)
+        df = df[~df["targets"].duplicated()].copy()
+        df["drug"] = df["targets"].map(groups["drug"].agg(lambda s: _short_list(", ".join(s), 4)))
+        if "opposes_change" in df:
+            df["opposes_change"] = df["targets"].map(groups["opposes_change"].agg(lambda s: _yes((s == "yes").any())))
+        if "l1000_z_metabolic" in df:
+            df["l1000_z_metabolic"] = df["targets"].map(groups["l1000_z_metabolic"].min())
+        df["targets"] = df["targets"].map(lambda v: _short_list(v, 8))
+        return df
+
+    if len(clin):
+        html = _table(fmt(clin.head(120)).head(40), cols, "proxclin", numeric=numeric)
+        if len(indirect):
+            html += (f'<details><summary>Close without hitting a pathway gene directly ({len(indirect)})</summary>'
+                     f'{_table(fmt(indirect.head(150)).head(60), cols, "proxindirect", numeric=numeric)}</details>')
+    else:
+        html = '<p class="card">No drug targets could be placed in the network.</p>'
+    return f"""
+<h3>Drugs whose targets sit close to the pathway genes in the protein network</h3>
+<div class="card">{intro}</div>
+<p class="muted">Network proximity (Guney et al. 2016). The pathway-driving genes above form the disease module. For
+each drug, distance is the average, over its targets, of the number of protein interaction steps to the nearest module
+gene (0 = the drug hits a module gene). Random distance is the same for {info.get('reps', 1000)} random protein sets
+with the same number of genes and the same connectivity, for both the targets and the module; z compares the two, so
+drugs on highly connected proteins are not favoured. Being close says the drug could affect these pathways, not in
+which direction. KEGG lists some targets only as a whole family (for example every phosphodiesterase for
+"PDE inhibitors"); many related targets make the random distances tight and the z large, so read z together with
+the targets. Drugs with identical targets share a row (L1000 z: the most reversing of them). Clinical drugs shown;
+full table, including the direction cross-references: <code>drugs_proximity.tsv</code>.</p>
+{html}
+"""
+
+
+def _short_list(v, n: int) -> str:
+    items = [x for x in str(v).split(", ") if x]
+    return ", ".join(items[:n]) + (f" (+{len(items) - n} more)" if len(items) > n else "")
+
+
 def _img(path: Path, alt: str) -> str:
     if not path.exists():
         return ""
@@ -363,6 +433,7 @@ test, pathways with FDR &lt; 0.25. Full table: <code>pathways_ora.tsv</code>.</p
   'changes are spread across many genes; GSEA above is more sensitive to that.</p>'}
 
 {treatment_section(drugs, case, drug_error)}
+{proximity_section(drugs)}
 
 <h2>Genes</h2>
 <div class="two">
@@ -392,6 +463,11 @@ chemical perturbation consensus signatures (Enrichr library <code>LINCS_L1000_Ch
 scored as the difference in mean t between each compound's up and down genes. "Clinical drug" means KEGG DRUG lists
 the compound under an official drug name (INN, USAN, JAN), a pharmacopoeia or a trade name. L1000 profiles come
 from cancer and other cell lines, so they fit tumor data better than brain or other tissues.</li>
+<li><b>Network proximity.</b> Closest distance from each KEGG DRUG drug's targets to the pathway-driving genes in the
+human interactome of Menche et al. (2015; about 13,000 proteins and 137,000 interactions after mapping to gene symbols,
+largest connected component), compared with 1000 random target sets and modules drawn from the same degree bins
+(at least 100 proteins per bin), as in Guney et al. (2016). The interactome is literature-curated, so well studied
+proteins have more known interactions.</li>
 </ul>
 <p><b>Caveats.</b> Expression changes suggest, but do not prove, altered pathway activity: enzyme activity also
 depends on protein levels, regulation and metabolite supply. Differences in tissue composition between groups
