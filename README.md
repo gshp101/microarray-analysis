@@ -6,7 +6,7 @@ pathways are affected.
 
 ## Status
 
-- Step 1 (load datasets): done; all four curated datasets load with the group sizes
+- Step 1 (load datasets): done; all six curated datasets load with the group sizes
   reported by the original studies.
 - Step 2 (differential expression): done. Welch t-test per gene, log2 fold change,
   Benjamini-Hochberg FDR, volcano plot.
@@ -55,6 +55,14 @@ group label) and `notes.txt`, and warns if group sizes differ from the published
 | lung_adenocarcinoma | GSE10072 | lung adenocarcinoma vs non-tumor |
 | breast_cancer | GSE15852 | breast tumor vs adjacent normal |
 | colorectal_cancer | GSE32323 | colorectal cancer vs paired normal |
+| alzheimers_aging_brain | GSE48350 | Alzheimer's vs cognitively intact controls aged 60+, four brain regions |
+| liver_cancer | GSE14520 | hepatocellular carcinoma vs paired non-tumor liver (GPL3921 cohort) |
+
+GSE48350 controls span ages 20 to 99 while the Alzheimer's cases are 60 or older, so
+controls under 60 are left out (93 of 173 kept). Its GEO values are GeneSpring per-gene
+normalized ratios centred on 1, so they are log2-transformed with a floor at the smallest
+positive value rather than at 1. GSE14520 also has a small second cohort on GPL571; only
+the 445-sample GPL3921 cohort (225 tumor, 220 non-tumor, 213 patients with both) is used.
 
 ## Analysis outputs
 
@@ -114,7 +122,7 @@ reversal scores reflect that too.
   literature-curated, so well studied proteins carry more known interactions.
 
 - **Cell line dependencies (DepMap).** For cancer data with a `--lineage` (curated: LUNG,
-  BREAST, LARGE INTESTINE; none for the Alzheimer's set), each pathway-driving gene is
+  BREAST, LARGE INTESTINE, LIVER; none for the Alzheimer's sets), each pathway-driving gene is
   checked against the DepMap 2023 CRISPR gene dependency sets (via Enrichr, which leaves
   out most genes every cell needs). It reports the share of tissue-matched lines that
   depend on the gene, the share of other lines, and a one-sided Fisher test. "Up and
@@ -138,6 +146,6 @@ subunits or nucleoporins (e.g. "Selenocysteine synthesis", "Regulation of ODC") 
 dropped by default, since they track general protein machinery rather than
 metabolic enzymes.
 
-Caveats: the tests treat samples as independent. GSE15852 and GSE32323 are paired
-tumor/normal designs and GSE5281 has several brain regions per donor, so a paired or
+Caveats: the tests treat samples as independent. GSE15852, GSE32323 and GSE14520 are
+paired tumor/normal designs and GSE5281 and GSE48350 have several brain regions per donor, so a paired or
 mixed model would be somewhat more powerful.

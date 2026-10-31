@@ -90,6 +90,41 @@ DATASETS: dict[str, DatasetSpec] = {
             tags=("cancer", "colorectal"),
             lineage="LARGE INTESTINE",
         ),
+        DatasetSpec(
+            key="alzheimers_aging_brain",
+            accession="GSE48350",
+            description="Alzheimer's disease vs cognitively intact controls aged 60 and over, "
+                        "four brain regions (hippocampus, entorhinal cortex, superior frontal "
+                        "and postcentral gyrus); controls under 60 left out so age does not "
+                        "drive the contrast (Affymetrix HG-U133 Plus 2.0)",
+            case="alzheimers", control="control",
+            # AD titles look like "hippocampus_female_85_AD_12", controls like
+            # "Hippocampus_male_45yrs_indiv12" (the series design labels AD cases "AD")
+            rules={"alzheimers": r"_AD_", "control": r"_indiv\d+"},
+            # study: 80 AD and 173 controls aged 20-99, of whom 93 are 60 or older
+            expected={"alzheimers": 80, "control": 93},
+            platform="GPL570",
+            sample_filter=r"age \(yrs\): (?:[6-9]\d|1\d\d)\b",
+            verified=True,
+            reference="Berchtold et al. 2008, PNAS; PMID 18832152 (AD cases also in Cribbs et al. "
+                      "2012, J Neuroinflammation; PMID 22824372)",
+            tags=("neurodegeneration", "dementia", "aging"),
+        ),
+        DatasetSpec(
+            key="liver_cancer",
+            accession="GSE14520",
+            description="Hepatocellular carcinoma vs paired non-tumor liver tissue, main "
+                        "cohort (Affymetrix HT HG-U133A, GPL3921)",
+            case="tumor", control="nontumor",
+            # titles "Liver Tumor Tissue LCS-079A" / "Liver Non-Tumor Tissue LCS-079B"
+            rules={"tumor": r"liver tumor tissue", "nontumor": r"non-tumor tissue"},
+            expected={"tumor": 225, "nontumor": 220},
+            platform="GPL3921",
+            verified=True,
+            reference="Roessler et al. 2010, Cancer Res; PMID 21159642",
+            tags=("cancer", "liver"),
+            lineage="LIVER",
+        ),
     ]
 }
 
