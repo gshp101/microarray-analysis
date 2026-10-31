@@ -25,12 +25,14 @@ def analyze(
     drugs: bool = True,
     cache_dir: Path = DEFAULT_CACHE,
     lineage: str | None = None,
+    kind: str = "metabolic",
 ) -> dict[str, pd.DataFrame]:
     """Run differential expression, ORA and GSEA, and (if `drugs`) the treatment-hypothesis steps;
     write tables, figures and report.html to out_dir/<accession>.
 
     `lineage` is the tissue of matching cancer cell lines (CCLE naming, e.g. "LUNG") for the
-    DepMap dependency check; leave it out for non-cancer data."""
+    DepMap dependency check; leave it out for non-cancer data. `kind` names the pathways in
+    titles and text ("metabolic", "signaling", "metabolic and signaling")."""
     out = Path(out_dir) / ds.accession
     out.mkdir(parents=True, exist_ok=True)
     label = label or f"{ds.accession}: {case} vs {control}"
@@ -44,14 +46,14 @@ def analyze(
 
     gsea = enrichment.gsea(de, gene_sets, permutations=permutations)
     gsea.to_csv(out / "pathways_gsea.tsv", sep="\t", index=False, float_format="%.4g")
-    plots.top_pathways(gsea, out / "pathways_gsea.png", f"{label}\ntop metabolic pathways (GSEA)")
+    plots.top_pathways(gsea, out / "pathways_gsea.png", f"{label}\ntop {kind} pathways (GSEA)")
 
     n_sig = int(((de["fdr"] < fdr) & (de["log2fc"].abs() >= min_abs_lfc)).sum())
     summary = [
         label,
         f"samples: {case}={de.attrs['n_case']}, {control}={de.attrs['n_control']}",
         f"genes tested: {len(de)}; significant (FDR<{fdr}, |log2FC|>={min_abs_lfc}): {n_sig}",
-        f"metabolic pathways tested (GSEA): {len(gsea)}; FDR<0.05: {int((gsea['fdr'] < 0.05).sum())}",
+        f"{kind} pathways tested (GSEA): {len(gsea)}; FDR<0.05: {int((gsea['fdr'] < 0.05).sum())}",
         f"ORA pathways with FDR<0.05: {int((ora['fdr'] < 0.05).sum())}",
     ]
     (out / "summary.txt").write_text("\n".join(summary) + "\n")
@@ -95,5 +97,5 @@ def analyze(
     report.write_report(out, label, case, control, de, gsea, ora, ds.samples,
                         source=source or ds.accession, notes=ds.notes, fdr=fdr, min_abs_lfc=min_abs_lfc,
                         gene_set_counts={k: v for k, v in counts.items() if v},
-                        drugs=drug_res, drug_error=drug_error)
+                        drugs=drug_res, drug_error=drug_error, kind=kind)
     return {"genes": de, "ora": ora, "gsea": gsea, **({"drugs": drug_res} if drug_res else {})}
