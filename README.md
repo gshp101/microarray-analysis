@@ -23,6 +23,12 @@ pathways are affected.
   degree-matched random sets (Guney et al. 2016).
 - Step 7 (cell line dependencies): done. For cancer data, flags pathway-driving genes that
   DepMap cancer cell lines of the same tissue need to grow, more often than other lines.
+- Signaling pathways (optional): `report --scope all` (or `signaling`) also scores KEGG
+  "Signal transduction" pathways and Reactome "Signal Transduction", so drugs acting on
+  signaling proteins such as kinase inhibitors can reach the drug lists. The default stays
+  `metabolic`. On the liver set (GSE14520) the VEGF, MAPK and PI3K-Akt pathways do not shift
+  at the mRNA level (GSEA FDR 0.37 to 0.84), so the approved HCC kinase inhibitors still don't
+  appear in the target list.
 - Step 8 (trial benchmark): `validate` checks the drug rankings against drugs with known
   positive and failed phase III (or randomized phase II) trials. It reports whether positives
   outrank failures (AUC), and whether the disease's own dataset ranks its positive drugs higher
