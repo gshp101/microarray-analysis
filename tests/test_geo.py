@@ -76,3 +76,28 @@ def test_prefix_dir():
     assert geo._prefix_dir("GSE5281") == "GSE5nnn"
     assert geo._prefix_dir("GSE123") == "GSEnnn"
     assert geo._prefix_dir("GPL570") == "GPLnnn"
+
+
+def test_log2_transform_floors_ratio_data_at_smallest_positive_value():
+    # GSE48350-style per-gene normalized ratios: centred on 1, mostly below 1
+    ratios = pd.DataFrame({"a": [0.01, 0.5, 1.0, 1400.0], "b": [0.0, 0.8, 1.2, 2.0]})
+    out = geo.log2_transform(ratios)
+    assert out.loc[1, "a"] == -1 and out.loc[0, "b"] == np.log2(0.01)
+    intensities = pd.DataFrame({"a": [0.0, 100.0, 1000.0]})
+    assert geo.log2_transform(intensities)["a"].tolist() == [0.0, np.log2(100), np.log2(1000)]
+
+
+def test_new_dataset_rules_match_real_metadata():
+    # titles and characteristics as they appear in the GSE48350 series matrix
+    brain = pd.DataFrame({
+        "title": ["hippocampus_female_85_AD_12", "Hippocampus_male_91yrs_indiv10",
+                  "Hippocampus_male_45yrs_indiv12"],
+        "characteristics_ch1": ["age (yrs): 85", "age (yrs): 91", "age (yrs): 45"],
+    })
+    spec = DATASETS["alzheimers_aging_brain"]
+    assert geo.assign_groups(brain, spec.rules).tolist() == ["alzheimers", "control", "control"]
+    kept = geo.sample_text(brain).str.contains(spec.sample_filter, case=False, regex=True)
+    assert kept.tolist() == [True, True, False]  # controls under 60 left out
+
+    liver = pd.DataFrame({"title": ["Liver Tumor Tissue LCS-079A", "Liver Non-Tumor Tissue LCS-079B"]})
+    assert geo.assign_groups(liver, DATASETS["liver_cancer"].rules).tolist() == ["tumor", "nontumor"]

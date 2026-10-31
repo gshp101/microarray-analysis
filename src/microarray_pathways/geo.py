@@ -184,6 +184,20 @@ def needs_log2(expr: pd.DataFrame) -> bool:
     return bool(qx[4] > 100 or (qx[5] - qx[0] > 50 and qx[1] > 0))
 
 
+def log2_transform(expr: pd.DataFrame) -> pd.DataFrame:
+    """log2 of linear values, with a floor so zeros and negatives stay finite.
+
+    Intensities are floored at 1. Ratios centred on 1, such as GeneSpring's
+    per-gene normalized values (GSE48350), are mostly below 1, so they are
+    floored at their smallest positive value instead.
+    """
+    values = expr.to_numpy(dtype=float)
+    floor = 1.0
+    if np.nanmedian(values) < 2:
+        floor = float(np.nanmin(np.where(values > 0, values, np.nan)))
+    return np.log2(expr.clip(lower=floor))
+
+
 def collapse_to_genes(expr: pd.DataFrame, symbols: pd.Series) -> pd.DataFrame:
     """One row per gene symbol, keeping the probe with the highest mean.
 
@@ -243,7 +257,7 @@ def load_table(expression: str | Path, samples: str | Path, name: str | None = N
     expr = expr[list(sheet.index)]
     notes = [f"source: {expression}", f"rows: {len(expr)}"]
     if needs_log2(expr):
-        expr = np.log2(expr.clip(lower=1))
+        expr = log2_transform(expr)
         notes.append("values looked linear; applied log2")
     symbols = pd.Series(expr.index.to_numpy(), index=[f"row{i}" for i in range(len(expr))])
     expr.index = symbols.index  # gene symbols may repeat; collapse by row position
@@ -288,7 +302,7 @@ def load_series(
         notes.append(f"filters kept {int(keep.sum())} of {len(keep)} samples")
 
     if needs_log2(expr):
-        expr = np.log2(expr.clip(lower=1))
+        expr = log2_transform(expr)
         notes.append("values looked linear; applied log2")
 
     genes = collapse_to_genes(expr, platform_symbols(gpl, cache_dir))
