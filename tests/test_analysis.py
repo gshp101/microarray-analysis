@@ -66,6 +66,28 @@ def test_parse_reactome_filters_to_metabolism_subtree():
     assert sets == {"Reactome: Glycolysis": {"HK1", "PKM"}}
 
 
+def test_brite_group_and_signaling_scope():
+    brite = ("AMetabolism\nB  Carbohydrate metabolism\nC    00010  Glycolysis / Gluconeogenesis\n"
+             "AEnvironmental Information Processing\nB  Signal transduction\nC    04010  MAPK signaling pathway\n"
+             "C    04370  VEGF signaling pathway\nB  Signaling molecules and interaction\n"
+             "C    04080  Neuroactive ligand-receptor interaction\nACellular Processes\nB  Cell growth and death\n"
+             "C    04110  Cell cycle\n")
+    assert pathways.parse_kegg_brite_group(brite) == {"04010", "04370"}
+
+    plist = "path:hsa00010\tGlycolysis - Homo sapiens (human)\npath:hsa04370\tVEGF signaling pathway\n"
+    links = "path:hsa00010\thsa:3101\npath:hsa04370\thsa:3791\n"
+    genes = "hsa:3101\tCDS\t10:1..2\tHK3; hexokinase 3\nhsa:3791\tCDS\t4:1..2\tKDR, VEGFR2; kinase insert\n"
+    sig = pathways.parse_kegg(plist, links, genes, keep=lambda pid: pid.endswith("04370"))
+    assert sig == {"KEGG: VEGF signaling pathway": {"KDR"}}
+
+
+def test_parse_reactome_takes_several_roots():
+    gmt = "Glycolysis\tR-HSA-70171\tHK1\nSignaling by VEGF\tR-HSA-194138\tKDR\nCell Cycle\tR-HSA-1640170\tCDK2\n"
+    rel = "R-HSA-1430728\tR-HSA-70171\nR-HSA-162582\tR-HSA-194138\n"
+    sets = pathways.parse_reactome(gmt, rel, (pathways.REACTOME_METABOLISM, pathways.REACTOME_SIGNALING))
+    assert set(sets) == {"Reactome: Glycolysis", "Reactome: Signaling by VEGF"}
+
+
 def test_machinery_fraction():
     assert pathways.machinery_fraction({"RPL3", "RPS6", "PSMA1", "HK1"}) == 0.75
     assert pathways.machinery_fraction({"HK1", "PKM"}) == 0.0
