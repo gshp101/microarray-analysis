@@ -47,13 +47,14 @@ def _list(names: list[str]) -> str:
 
 # ------------------------------------------------------------------ sections
 
-def findings(gsea: pd.DataFrame, case: str, control: str, fdr: float = 0.05, n: int = 5) -> str:
+def findings(gsea: pd.DataFrame, case: str, control: str, fdr: float = 0.05, n: int = 5,
+             kind: str = "metabolic") -> str:
     """Plain-language summary of the strongest pathway shifts."""
     sig = gsea[gsea["fdr"] < fdr]
     if sig.empty:
-        return (f"<p>No metabolic pathway shifted at FDR &lt; {fdr} between <b>{_esc(case)}</b> and "
+        return (f"<p>No {kind} pathway shifted at FDR &lt; {fdr} between <b>{_esc(case)}</b> and "
                 f"<b>{_esc(control)}</b>. The tables below list the closest candidates.</p>")
-    out = [f"<p><b>{len(sig)}</b> of {len(gsea)} metabolic pathways tested shift between "
+    out = [f"<p><b>{len(sig)}</b> of {len(gsea)} {kind} pathways tested shift between "
            f"<b>{_esc(case)}</b> and <b>{_esc(control)}</b> (GSEA, FDR &lt; {fdr}).</p><ul>"]
     for direction, word in (("down", "Lower"), ("up", "Higher")):
         d = sig[sig["direction"] == direction]
@@ -66,7 +67,7 @@ def findings(gsea: pd.DataFrame, case: str, control: str, fdr: float = 0.05, n: 
     return "".join(out)
 
 
-def pathway_chart(gsea: pd.DataFrame, n: int = 20) -> str:
+def pathway_chart(gsea: pd.DataFrame, n: int = 20, kind: str = "metabolic") -> str:
     """Horizontal bar chart of NES for the top pathways, as inline SVG with hover tooltips."""
     top = gsea.dropna(subset=["nes"]).nsmallest(n, "fdr").sort_values("nes", ascending=False)
     if top.empty:
@@ -77,7 +78,7 @@ def pathway_chart(gsea: pd.DataFrame, n: int = 20) -> str:
     x0 = label_w + plot_w / 2
     scale = (plot_w / 2) / lim
     parts = [f'<svg viewBox="0 0 {label_w + plot_w + fdr_w} {h}" role="img" '
-             f'aria-label="Top metabolic pathways by GSEA normalized enrichment score" class="chart">']
+             f'aria-label="Top {kind} pathways by GSEA normalized enrichment score" class="chart">']
     for v in range(-int(lim), int(lim) + 1):
         x = x0 + v * scale
         parts.append(f'<line x1="{x:.1f}" x2="{x:.1f}" y1="{pad - 6}" y2="{h - 24}" class="grid"/>'
@@ -136,7 +137,7 @@ def _yes(v) -> str:
     return "yes" if bool(v) and not pd.isna(v) else ""
 
 
-def treatment_section(drugs: dict | None, case: str, error: str = "") -> str:
+def treatment_section(drugs: dict | None, case: str, error: str = "", kind: str = "metabolic") -> str:
     """Ranked drug candidates from both routes, framed as research leads."""
     warn = ('<div class="card warn"><b>Research leads, not treatment advice.</b> These lists come from '
             'matching gene expression to drug databases. A drug that acts on a changed enzyme, or whose '
@@ -157,7 +158,7 @@ def treatment_section(drugs: dict | None, case: str, error: str = "") -> str:
         intro += f"<p>Strongest target-based leads: {_list(top)}.</p>"
     clin = rev[rev["clinical_drug"].astype(bool)] if len(rev) else rev
     if len(clin):
-        intro += (f"<p>Clinical drugs whose L1000 signature best reverses the metabolic profile: "
+        intro += (f"<p>Clinical drugs whose L1000 signature best reverses the {kind} profile: "
                   f"{_list(clin.head(5)['compound'].tolist())}.</p>")
 
     def short_paths(v) -> str:
@@ -205,7 +206,7 @@ genes: <code>drug_target_genes.tsv</code>.</p>
 <h3>Compounds whose expression signature reverses the disease</h3>
 <p class="muted">LINCS L1000 consensus signatures: for ~5,400 compounds, the genes each one raises and lowers in
 cultured human cell lines. Metabolic z compares the compound's raised genes with its lowered genes on the
-{_esc(case)} vs control t statistic, over metabolic pathway genes only; more negative means the compound pushes
+{_esc(case)} vs control t statistic, over {kind} pathway genes only; more negative means the compound pushes
 those genes back toward control. All-gene z is the same over every gene. Percentile is the share of all compounds
 that reverse less strongly. Genes move in co-regulated groups, so treat z as a ranking, not a p-value. Arrows show
 how the compound moves each gene. Full table: <code>drugs_reversal.tsv</code>.</p>
@@ -421,6 +422,7 @@ def write_report(
     gene_set_counts: dict[str, int] | None = None,
     drugs: dict | None = None,
     drug_error: str = "",
+    kind: str = "metabolic",
 ) -> Path:
     """Write report.html into out_dir (which already holds the figures and TSVs)."""
     out = Path(out_dir)
@@ -437,6 +439,10 @@ def write_report(
     ora_show = ora[ora["fdr"] < 0.25]
     mapping = ("Gene symbols as given in the table." if source.startswith("user table")
                else "Probes mapped to gene symbols with the GEO platform annotation.")
+    sets_scope = {"metabolic": "KEGG Metabolism category; Reactome pathways under Metabolism,",
+                  "signaling": "KEGG Signal transduction group; Reactome pathways under Signal Transduction,",
+                  }.get(kind, "KEGG Metabolism category and Signal transduction group; Reactome pathways under "
+                              "Metabolism and Signal Transduction,")
     sets_note = ", ".join(f"{v} {k}" for k, v in (gene_set_counts or {}).items())
 
     body = f"""
@@ -450,14 +456,14 @@ generated {dt.date.today().isoformat()} by microarray-pathways {__version__}</p>
    <span>samples ({_esc(case)} / {_esc(control)})</span></div>
  <div class="stat"><b>{len(genes):,}</b><span>genes measured</span></div>
  <div class="stat"><b>{n_up:,} ↑ {n_down:,} ↓</b><span>genes changed (FDR &lt; {fdr}, ≥{2 ** min_abs_lfc:g}-fold)</span></div>
- <div class="stat"><b>{n_path} / {len(gsea)}</b><span>metabolic pathways shifted</span></div>
+ <div class="stat"><b>{n_path} / {len(gsea)}</b><span>{kind} pathways shifted</span></div>
 </div>
 
 <h2>Summary</h2>
-<div class="card">{findings(gsea, case, control, fdr)}</div>
+<div class="card">{findings(gsea, case, control, fdr, kind=kind)}</div>
 
-<h2>Top metabolic pathways</h2>
-<div class="card"><div class="chartwrap">{pathway_chart(gsea)}</div>
+<h2>Top {kind} pathways</h2>
+<div class="card"><div class="chartwrap">{pathway_chart(gsea, kind=kind)}</div>
 <p class="legend">Normalized enrichment score from GSEA. <i style="background:var(--up)"></i>higher in {_esc(case)}
 <i style="background:var(--down)"></i>lower in {_esc(case)}. Hover a bar for its leading genes.</p></div>
 
@@ -477,7 +483,7 @@ test, pathways with FDR &lt; 0.25. Full table: <code>pathways_ora.tsv</code>.</p
   '<p class="card">No pathway passes FDR &lt; 0.25 by over-representation. This is common when '
   'changes are spread across many genes; GSEA above is more sensitive to that.</p>'}
 
-{treatment_section(drugs, case, drug_error)}
+{treatment_section(drugs, case, drug_error, kind)}
 {proximity_section(drugs)}
 {depmap_section(drugs, case)}
 
@@ -496,8 +502,8 @@ test, pathways with FDR &lt; 0.25. Full table: <code>pathways_ora.tsv</code>.</p
 one gene, the one with the highest mean is kept. Values are on a log2 scale.</li>
 <li><b>Differential expression.</b> Welch's t-test per gene, log2 fold change as the difference of group means,
 Benjamini-Hochberg FDR. Changed genes: FDR &lt; {fdr} and at least {2 ** min_abs_lfc:g}-fold.</li>
-<li><b>Pathways.</b> {_esc(sets_note) or 'KEGG and Reactome'} metabolic gene sets (KEGG Metabolism category;
-Reactome pathways under Metabolism, minus sets made mostly of ribosomal, proteasome or nuclear pore genes),
+<li><b>Pathways.</b> {_esc(sets_note) or 'KEGG and Reactome'} {kind} gene sets ({sets_scope}
+minus sets made mostly of ribosomal, proteasome or nuclear pore genes),
 10 to 500 measured genes each.</li>
 <li><b>GSEA.</b> All genes ranked by t statistic; preranked GSEA (gseapy, 1000 permutations). Positive NES
 means the pathway's genes sit toward the {_esc(case)}-high end.</li>

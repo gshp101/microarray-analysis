@@ -107,10 +107,11 @@ def _cmd_report(args: argparse.Namespace) -> int:
     from . import analysis, pathways
 
     ds, case, control, label, source, lineage = _resolve(args)
-    sets = pathways.metabolic_gene_sets(tuple(args.sources.split(",")), Path(args.cache))
+    sets = pathways.pathway_gene_sets(tuple(args.sources.split(",")), args.scope, Path(args.cache))
+    kind = {"all": "metabolic and signaling"}.get(args.scope, args.scope)
     analysis.analyze(ds, case, control, sets, args.out, label=label,
                      permutations=args.permutations, source=source, drugs=not args.no_drugs,
-                     cache_dir=Path(args.cache), lineage=lineage)
+                     cache_dir=Path(args.cache), lineage=lineage, kind=kind)
     out = Path(args.out) / ds.accession
     print((out / "summary.txt").read_text(), end="")
     print(f"report: {out / 'report.html'}")
@@ -161,6 +162,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--data", default="data", help="where loaded GEO datasets are saved")
     ap.add_argument("--out", default="results", help="output directory")
     ap.add_argument("--sources", default="kegg,reactome", help="pathway databases, comma separated")
+    ap.add_argument("--scope", choices=("metabolic", "signaling", "all"), default="metabolic",
+                    help="pathways to score: metabolic (default), signaling (KEGG Signal transduction, "
+                    "Reactome Signal Transduction) or all; signaling lets kinase inhibitors and other "
+                    "signaling drugs reach the drug lists")
     ap.add_argument("--permutations", type=int, default=1000, help="GSEA permutations")
     ap.add_argument("--no-drugs", action="store_true",
                     help="skip the treatment-hypothesis step (KEGG DRUG targets, LINCS L1000 reversal)")
