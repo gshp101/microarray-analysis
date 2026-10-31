@@ -117,6 +117,18 @@ def _cmd_report(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_validate(args: argparse.Namespace) -> int:
+    from . import validation
+
+    bench = validation.load_benchmark(args.benchmark)
+    accessions = [args.dataset] + [a for a in args.controls.split(",") if a and a != args.dataset]
+    ranks, summary = validation.validate(bench, accessions, args.dataset, [Path(r) for r in args.results])
+    out = validation.write(ranks, summary, args.dataset, Path(args.out) / args.dataset)
+    print(summary.round(3).to_string(index=False))
+    print(f"tables: {out}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="microarray_pathways")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -157,7 +169,19 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--cache", default=str(geo.DEFAULT_CACHE), help="download cache directory")
     ap.set_defaults(func=_cmd_report)
 
+    vp = sub.add_parser("validate", help="check the drug rankings against known clinical trial outcomes")
+    vp.add_argument("dataset", help="accession whose disease the benchmark covers, e.g. GSE14520")
+    vp.add_argument("--benchmark", default=str(Path(__file__).parent / "benchmarks" / "hcc_trials.tsv"),
+                    help="TSV with drug and outcome (positive/negative) columns")
+    vp.add_argument("--controls", default="", help="other accessions to compare against, comma separated")
+    vp.add_argument("--results", action="append", default=None,
+                    help="folder holding <accession>/drugs_*.tsv (repeat; default: results)")
+    vp.add_argument("--out", default="results_validation", help="output directory")
+    vp.set_defaults(func=_cmd_validate)
+
     args = p.parse_args(argv)
+    if getattr(args, "results", 0) is None:
+        args.results = ["results"]
     return args.func(args)
 
 
