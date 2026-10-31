@@ -1,0 +1,30 @@
+drug	outcome	trial	note
+sorafenib	positive	SHARP (phase III, 2008)	first-line, OS benefit; approved
+lenvatinib	positive	REFLECT (phase III, 2018)	first-line, non-inferior to sorafenib; approved
+regorafenib	positive	RESORCE (phase III, 2017)	second-line after sorafenib; approved
+cabozantinib	positive	CELESTIAL (phase III, 2018)	second/third-line; approved
+donafenib	positive	ZGDH3 (phase III, 2021)	first-line, OS better than sorafenib; approved in China
+rivoceranib	positive	AHELP (phase III, 2021)	apatinib; second-line; approved in China
+ramucirumab	positive	REACH-2 (phase III, 2019)	second-line, AFP >= 400; approved
+oxaliplatin	positive	EACH (phase III, 2013)	FOLFOX4 vs doxorubicin; approved in China
+fluorouracil	positive	EACH (phase III, 2013)	FOLFOX4 vs doxorubicin; approved in China
+sunitinib	negative	SUN1170 (phase III, 2013)	inferior to sorafenib
+brivanib	negative	BRISK-FL / BRISK-PS (phase III, 2013)	missed OS endpoints
+linifanib	negative	phase III vs sorafenib (2015)	missed OS endpoint
+erlotinib	negative	SEARCH (phase III, 2015)	no gain added to sorafenib
+everolimus	negative	EVOLVE-1 (phase III, 2014)	no OS gain after sorafenib
+tivantinib	negative	METIV-HCC (phase III, 2018)	no OS gain in MET-high HCC
+doxorubicin	negative	EACH (2013); CALGB 80802 (2019)	lost to FOLFOX4; no gain added to sorafenib
+nolatrexed	negative	phase III vs doxorubicin (2007)	worse OS
+seocalcitol	negative	phase III (2008)	no OS gain
+tamoxifen	negative	CLIP and other RCTs (1998-2005)	no OS gain
+megestrol	negative	phase III (2011)	no OS gain
+octreotide	negative	HECTOR (phase III, 2007)	no OS gain
+pravastatin	negative	PRODIGE 21 (phase III, 2019)	no gain added to sorafenib
+peretinoin	negative	phase III adjuvant (2014)	missed recurrence endpoint
+orantinib	negative	ORIENTAL (phase III, 2017)	no gain added to TACE
+menatetrenone	negative	phase III adjuvant (2011)	vitamin K2; missed recurrence endpoint
+tegafur	negative	adjuvant RCTs (2006, 2016)	uracil-tegafur; no recurrence benefit
+dovitinib	negative	randomized phase II vs sorafenib (2015)	not better than sorafenib
+nintedanib	negative	randomized phase II vs sorafenib (2017)	not better than sorafenib
+axitinib	negative	randomized phase II vs placebo (2015)	PFS gain, no OS gain

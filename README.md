@@ -23,6 +23,13 @@ pathways are affected.
   degree-matched random sets (Guney et al. 2016).
 - Step 7 (cell line dependencies): done. For cancer data, flags pathway-driving genes that
   DepMap cancer cell lines of the same tissue need to grow, more often than other lines.
+- Step 8 (trial benchmark): `validate` checks the drug rankings against drugs with known
+  positive and failed phase III (or randomized phase II) trials. It reports whether positives
+  outrank failures (AUC), and whether the disease's own dataset ranks its positive drugs higher
+  than the other datasets do. A benchmark for liver cancer (HCC) ships in `benchmarks/hcc_trials.tsv`.
+
+      microarray-pathways validate GSE14520 --controls GSE10072,GSE15852,GSE32323,GSE5281,GSE48350 \
+          --results results_drugs --results results_proximity
 
 ## Usage
 
