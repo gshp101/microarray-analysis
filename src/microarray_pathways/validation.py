@@ -140,3 +140,105 @@ def write(ranks: pd.DataFrame, summary: pd.DataFrame, target: str, out_dir: str 
         out / "benchmark_ranks.tsv", sep="\t", index=False)
     summary.round(4).to_csv(out / "benchmark_summary.tsv", sep="\t", index=False)
     return out
+
+
+ROUTE_LABELS = {"kegg_targets": "KEGG drug targets", "l1000_reversal": "L1000 signature reversal",
+                "proximity": "Network proximity"}
+
+
+def roc_table(bench: pd.DataFrame, target: str, roots: list[Path],
+              threshold: float = 90.0) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """ROC of each route's ranking in `target`, with the benchmark outcomes as ground truth.
+
+    Every benchmark drug is kept: one a route did not score was not identified by it, so
+    it gets percentile 0 (tied at the bottom). Detections and false alarms count the
+    positive and negative drugs at or above `threshold` (percentile, 100 = top).
+
+    Returns (scores, summary): scores has one row per drug and route; summary per route
+    has AUC, detections, false alarms and the ROC points (fpr, tpr lists).
+    """
+    rows, summary = [], []
+    truth = (bench["outcome"] == "positive").to_numpy()
+    for route, (fname, *_) in ROUTES.items():
+        path = find_file(roots, target, fname)
+        if path is None:
+            continue
+        pct = route_percentiles(pd.read_csv(path, sep="\t"), route)
+        score = bench["key"].map(pct).to_numpy(dtype=float)
+        scored = ~np.isnan(score)
+        score = np.where(scored, score, 0.0)
+        for (_, b), s, ok in zip(bench.iterrows(), score, scored):
+            rows.append({"route": route, "drug": b["drug"], "outcome": b["outcome"],
+                         "scored": ok, "percentile": round(s, 2), "flagged": s >= threshold})
+        fpr, tpr = roc_points(score, truth)
+        a, p = auc(pd.Series(score[truth]), pd.Series(score[~truth]))
+        flagged = score >= threshold
+        summary.append({"route": route, "n_positive": int(truth.sum()), "n_negative": int((~truth).sum()),
+                        "positives_scored": int((scored & truth).sum()),
+                        "negatives_scored": int((scored & ~truth).sum()),
+                        "auc": a, "p": p, "threshold_pct": threshold,
+                        "detections": int((flagged & truth).sum()),
+                        "false_alarms": int((flagged & ~truth).sum()),
+                        "fpr": fpr, "tpr": tpr})
+    if not summary:
+        raise FileNotFoundError(f"no drug tables found for {target} under {roots}")
+    return pd.DataFrame(rows), pd.DataFrame(summary)
+
+
+def roc_points(score: np.ndarray, truth: np.ndarray) -> tuple[list[float], list[float]]:
+    """ROC curve through every distinct score, ties stepping diagonally (start at 0,0)."""
+    pos, neg = truth.sum(), (~truth).sum()
+    fpr, tpr = [0.0], [0.0]
+    for cut in np.unique(score)[::-1]:
+        hit = score >= cut
+        fpr.append((hit & ~truth).sum() / neg)
+        tpr.append((hit & truth).sum() / pos)
+    return fpr, tpr
+
+
+def _n(k: int, word: str) -> str:
+    return f"{k} {word}" + ("" if k == 1 else "s")
+
+
+def plot_roc(summary: pd.DataFrame, target: str, path: str | Path, subtitle: str = "") -> Path:
+    from . import plots  # matplotlib only when plotting
+
+    plt = plots.plt
+    n = len(summary)
+    fig, axes = plt.subplots(1, n, figsize=(4.4 * n, 5.2), dpi=150, squeeze=False,
+                             layout="constrained")
+    for ax, (_, r) in zip(axes[0], summary.iterrows()):
+        plots._style(ax)
+        ax.grid(axis="both", color="#e6e5e0", linewidth=0.8)
+        ax.plot([0, 1], [0, 1], color=plots.NEUTRAL, linewidth=1, linestyle="--")
+        ax.plot(r["fpr"], r["tpr"], color=plots.DOWN, linewidth=2)
+        # operating point at the threshold
+        x, y = r["false_alarms"] / r["n_negative"], r["detections"] / r["n_positive"]
+        ax.plot([x], [y], "o", color=plots.UP, markersize=6, zorder=3)
+        ax.annotate(f"top {100 - r['threshold_pct']:.0f}%", (x, y), xytext=(6, -12),
+                    textcoords="offset points", fontsize=8, color=plots.MUTED)
+        ax.set_xlim(-0.02, 1.02)
+        ax.set_ylim(-0.02, 1.02)
+        ax.set_aspect("equal")
+        ax.set_xlabel(f"False alarm rate (of {r['n_negative']} failed-trial drugs)", fontsize=9, color=plots.MUTED)
+        ax.set_ylabel(f"Detection rate (of {r['n_positive']} positive-trial drugs)", fontsize=9, color=plots.MUTED)
+        ax.set_title(f"{ROUTE_LABELS.get(r['route'], r['route'])}\n"
+                     f"AUC {r['auc']:.2f} · {_n(r['detections'], 'detection')} · {_n(r['false_alarms'], 'false alarm')}",
+                     loc="left", fontsize=10, color=plots.INK)
+    head = f"{target}: drug ranking ROC vs HCC phase III outcomes"
+    fig.suptitle(head + (f"\n{subtitle}" if subtitle else ""), x=0.01, ha="left", fontsize=11, color=plots.INK)
+    fig.savefig(path)
+    plt.close(fig)
+    return Path(path)
+
+
+def write_roc(scores: pd.DataFrame, summary: pd.DataFrame, target: str, out_dir: str | Path) -> Path:
+    out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    thr = summary["threshold_pct"].iloc[0]
+    plot_roc(summary, target, out / "roc.png",
+             subtitle=f"Counts at the top {100 - thr:.0f}% of each ranking; drugs a route did not score rank last.")
+    scores.sort_values(["route", "percentile"], ascending=[True, False]).to_csv(
+        out / "roc_scores.tsv", sep="\t", index=False)
+    summary.drop(columns=["fpr", "tpr"]).round(4).to_csv(out / "roc_summary.tsv", sep="\t", index=False)
+    return out
