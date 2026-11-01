@@ -37,13 +37,17 @@ pathways are affected.
       microarray-pathways validate GSE14520 --controls GSE10072,GSE15852,GSE32323,GSE5281,GSE48350 \
           --results results_drugs --results results_proximity
 
-  `roc` draws one ROC curve per route with the same benchmark as ground truth (positive-trial
-  drugs vs failed-trial drugs). Drugs a route did not score count as not identified and rank
-  last. Each panel title gives the AUC and the detections and false alarms in the top 10% of
-  the ranking (`--threshold 90`, a percentile). On GSE14520 no route beats chance
-  (AUC 0.40 to 0.51).
+  `roc` draws ROC curves for each route, plus the best of the three, using trial outcomes as
+  ground truth (positive-trial drugs vs failed-trial drugs). Drugs a route did not score count
+  as not identified and rank last. Each panel title gives the AUC and the detections and false
+  alarms in the top 10% of the ranking (`--threshold 90`, a percentile). Give several datasets
+  to pool them: each is scored against its own disease's benchmark (`benchmarks/`: HCC, NSCLC,
+  breast, colorectal, Alzheimer's), and the drug-dataset pairs go into one curve. Pooled over
+  the six curated datasets, no route does much better than chance (AUC 0.50 to 0.59).
 
       microarray-pathways roc GSE14520 --results results_drugs --results results_proximity
+      microarray-pathways roc GSE14520 GSE10072 GSE15852 GSE32323 GSE5281 GSE48350 \
+          --results results_drugs --results results_proximity
 
 ## Usage
 

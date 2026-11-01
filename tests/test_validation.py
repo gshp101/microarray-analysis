@@ -55,11 +55,26 @@ def test_roc_counts_detections_false_alarms_and_ranks_unscored_last(tmp_path):
     filler = {f"other{i}": float(i) for i in range(17)}
     # 20 drugs: Good A top (pct 100), Bad C second (95), Good B not scored
     _write(tmp_path, "T", {"Good A": -10.0, "Bad C": -9.0, **filler})
-    scores, summary = validation.roc_table(bench, "T", [tmp_path], threshold=90)
+    scores, summary = validation.roc_table([("T", bench)], [tmp_path], threshold=90)
     row = summary.set_index("route").loc["l1000_reversal"]
     assert row["detections"] == 1 and row["false_alarms"] == 1
     assert row["positives_scored"] == 1 and row["auc"] == 0.5
     assert row["tpr"][-1] == 1.0 and row["fpr"][-1] == 1.0
-    assert scores.set_index("drug").loc["Good B", "percentile"] == 0
+    l1000 = scores[scores["route"] == "l1000_reversal"].set_index("drug")
+    assert l1000.loc["Good B", "percentile"] == 0
     out = validation.write_roc(scores, summary, "T", tmp_path / "out")
     assert (out / "roc.png").exists() and (out / "roc_summary.tsv").exists()
+
+
+def test_roc_pools_datasets_each_with_its_own_benchmark(tmp_path):
+    bench = _bench(tmp_path)
+    other = bench.copy()
+    other["outcome"] = ["negative", "negative", "positive"]  # second disease: labels reversed
+    filler = {f"other{i}": float(i) for i in range(17)}
+    _write(tmp_path, "T", {"Good A": -10.0, "Good B": -9.0, "Bad C": 99.0, **filler})
+    _write(tmp_path, "U", {"Good A": 99.0, "Good B": 98.0, "Bad C": -10.0, **filler})
+    scores, summary = validation.roc_table([("T", bench), ("U", other)], [tmp_path], threshold=90)
+    row = summary.set_index("route").loc["l1000_reversal"]
+    assert row["datasets"] == 2 and row["n_positive"] == 3 and row["n_negative"] == 3
+    assert row["auc"] == 1.0 and row["detections"] == 3 and row["false_alarms"] == 0
+    assert set(scores["route"]) == {"l1000_reversal", "any_route"}

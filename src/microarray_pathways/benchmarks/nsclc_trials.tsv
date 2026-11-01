@@ -1,0 +1,32 @@
+drug	outcome	trial	note
+cisplatin	positive	platinum doublet phase III trials	standard first-line backbone; approved
+carboplatin	positive	platinum doublet phase III trials (e.g. ECOG 1594)	standard first-line backbone
+paclitaxel	positive	ECOG 1594; ECOG 4599	first-line with platinum; approved
+docetaxel	positive	TAX 317 (phase III, 2000)	second-line OS gain; approved
+pemetrexed	positive	JMDB (2008); PARAMOUNT (2012)	non-squamous first-line and maintenance; approved
+gemcitabine	positive	phase III with cisplatin (e.g. ECOG 1594)	first-line; approved
+vinorelbine	positive	phase III vs 5-FU/LV (1994); ANITA adjuvant	approved
+erlotinib	positive	BR.21 (phase III, 2005)	OS gain second-line; approved
+gefitinib	positive	IPASS (phase III, 2009)	EGFR-mutant first-line; approved
+afatinib	positive	LUX-Lung 3 (phase III, 2013)	EGFR-mutant first-line; approved
+osimertinib	positive	FLAURA (phase III, 2018)	EGFR-mutant first-line OS gain; approved
+crizotinib	positive	PROFILE 1014 (phase III, 2014)	ALK+ first-line; approved
+alectinib	positive	ALEX (phase III, 2017)	ALK+ first-line; approved
+bevacizumab	positive	ECOG 4599 (phase III, 2006)	added to carboplatin/paclitaxel, OS gain; approved
+ramucirumab	positive	REVEL (phase III, 2014)	with docetaxel, OS gain; approved
+nintedanib	positive	LUME-Lung 1 (phase III, 2014)	with docetaxel in adenocarcinoma; approved EU
+necitumumab	positive	SQUIRE (phase III, 2015)	squamous, OS gain; approved
+sorafenib	negative	ESCAPE (2010); NExUS (2012)	no OS gain added to chemotherapy
+vandetanib	negative	ZODIAC / ZEAL / ZEST / ZEPHYR (2011-2012)	no OS gain; not approved for NSCLC
+cediranib	negative	BR.24 / BR.29 (2010-2014)	no OS gain
+motesanib	negative	MONET1 (phase III, 2012)	no OS gain
+figitumumab	negative	ADVIGO 1016 (phase III, 2011)	stopped for futility
+bexarotene	negative	SPIRIT I / II (phase III, 2007)	no OS gain
+celecoxib	negative	NVALT-4; CYCLUS; NCIC BR.24-like COX-2 RCTs	no OS gain added to chemotherapy
+enzastaurin	negative	phase III maintenance (2011)	no OS gain
+tivantinib	negative	MARQUEE (phase III, 2015)	stopped for futility
+onartuzumab	negative	MetLung (phase III, 2017)	no OS gain
+selumetinib	negative	SELECT-1 (phase III, 2017)	no OS gain in KRAS-mutant
+iniparib	negative	phase III squamous (2015)	no OS gain
+vadimezan	negative	ATTRACT-1 (phase III, 2011)	no OS gain
+sunitinib	negative	SUN 1087 (phase III, 2012)	no OS gain added to erlotinib

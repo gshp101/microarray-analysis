@@ -1,0 +1,32 @@
+drug	outcome	trial	note
+tamoxifen	positive	EBCTCG overview of adjuvant RCTs	ER+; approved
+letrozole	positive	BIG 1-98 (phase III, 2005)	ER+; approved
+anastrozole	positive	ATAC (phase III, 2002)	ER+; approved
+exemestane	positive	IES (phase III, 2004)	ER+; approved
+fulvestrant	positive	FALCON (phase III, 2016)	ER+; approved
+trastuzumab	positive	Slamon (phase III, 2001); HERA	HER2+; approved
+lapatinib	positive	EGF100151 (phase III, 2006)	HER2+; approved
+pertuzumab	positive	CLEOPATRA (phase III, 2012)	HER2+; approved
+neratinib	positive	ExteNET (phase III, 2016)	HER2+ extended adjuvant; approved
+tucatinib	positive	HER2CLIMB (phase III, 2020)	HER2+; approved
+palbociclib	positive	PALOMA-2 (phase III, 2016)	ER+; approved
+ribociclib	positive	MONALEESA-2 (phase III, 2016)	ER+; approved
+abemaciclib	positive	MONARCH 3 (phase III, 2017)	ER+; approved
+everolimus	positive	BOLERO-2 (phase III, 2012)	ER+ after AI; approved
+alpelisib	positive	SOLAR-1 (phase III, 2019)	PIK3CA-mutant ER+; approved
+olaparib	positive	OlympiAD (phase III, 2017)	BRCA-mutant; approved
+talazoparib	positive	EMBRACA (phase III, 2018)	BRCA-mutant; approved
+capecitabine	positive	phase III with docetaxel (2002)	approved
+docetaxel	positive	TAX 316; BCIRG 001	approved
+paclitaxel	positive	CALGB 9344 (phase III, 2003)	adjuvant; approved
+doxorubicin	positive	anthracycline adjuvant RCTs (EBCTCG)	approved
+cyclophosphamide	positive	CMF / AC adjuvant RCTs (EBCTCG)	approved
+eribulin	positive	EMBRACE (phase III, 2011)	OS gain; approved
+gemcitabine	positive	phase III with paclitaxel (2008)	approved
+bevacizumab	negative	AVADO / RIBBON-1 / E2100 (2008-2011)	no OS gain; FDA approval revoked 2011
+iniparib	negative	phase III TNBC (2014)	missed OS and PFS
+sunitinib	negative	SUN 1094 / SUN 1077 / SUN 1064 (2010-2013)	no gain
+sorafenib	negative	RESILIENCE (phase III, 2018)	no PFS gain
+entinostat	negative	E2112 (phase III, 2022)	no OS or PFS gain
+ramucirumab	negative	ROSE/TRIO-12 (phase III, 2014)	no PFS gain added to docetaxel
+celecoxib	negative	REACT (phase III, 2021)	no gain as adjuvant
