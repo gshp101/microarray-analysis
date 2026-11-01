@@ -37,6 +37,14 @@ pathways are affected.
       microarray-pathways validate GSE14520 --controls GSE10072,GSE15852,GSE32323,GSE5281,GSE48350 \
           --results results_drugs --results results_proximity
 
+  `roc` draws one ROC curve per route with the same benchmark as ground truth (positive-trial
+  drugs vs failed-trial drugs). Drugs a route did not score count as not identified and rank
+  last. Each panel title gives the AUC and the detections and false alarms in the top 10% of
+  the ranking (`--threshold 90`, a percentile). On GSE14520 no route beats chance
+  (AUC 0.40 to 0.51).
+
+      microarray-pathways roc GSE14520 --results results_drugs --results results_proximity
+
 ## Usage
 
     pip install -e .[dev]

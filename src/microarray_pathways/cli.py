@@ -130,6 +130,17 @@ def _cmd_validate(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_roc(args: argparse.Namespace) -> int:
+    from . import validation
+
+    bench = validation.load_benchmark(args.benchmark)
+    scores, summary = validation.roc_table(bench, args.dataset, [Path(r) for r in args.results], args.threshold)
+    out = validation.write_roc(scores, summary, args.dataset, Path(args.out) / args.dataset)
+    print(summary.drop(columns=["fpr", "tpr"]).round(3).to_string(index=False))
+    print(f"figure: {out / 'roc.png'}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="microarray_pathways")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -183,6 +194,17 @@ def main(argv: list[str] | None = None) -> int:
                     help="folder holding <accession>/drugs_*.tsv (repeat; default: results)")
     vp.add_argument("--out", default="results_validation", help="output directory")
     vp.set_defaults(func=_cmd_validate)
+
+    rp = sub.add_parser("roc", help="ROC curve of each drug ranking against known clinical trial outcomes")
+    rp.add_argument("dataset", help="accession whose disease the benchmark covers, e.g. GSE14520")
+    rp.add_argument("--benchmark", default=str(Path(__file__).parent / "benchmarks" / "hcc_trials.tsv"),
+                    help="TSV with drug and outcome (positive/negative) columns")
+    rp.add_argument("--threshold", type=float, default=90.0,
+                    help="percentile (100 = top) at or above which a drug counts as identified (default 90)")
+    rp.add_argument("--results", action="append", default=None,
+                    help="folder holding <accession>/drugs_*.tsv (repeat; default: results)")
+    rp.add_argument("--out", default="results_validation", help="output directory")
+    rp.set_defaults(func=_cmd_roc)
 
     args = p.parse_args(argv)
     if getattr(args, "results", 0) is None:
