@@ -133,9 +133,23 @@ def _cmd_validate(args: argparse.Namespace) -> int:
 def _cmd_roc(args: argparse.Namespace) -> int:
     from . import validation
 
-    bench = validation.load_benchmark(args.benchmark)
-    scores, summary = validation.roc_table(bench, args.dataset, [Path(r) for r in args.results], args.threshold)
-    out = validation.write_roc(scores, summary, args.dataset, Path(args.out) / args.dataset)
+    bench_dir = Path(validation.BENCHMARKS)
+    sets = []
+    for acc in args.datasets:
+        path = args.benchmark or validation.DEFAULT_BENCHMARKS.get(acc)
+        if path is None:
+            raise SystemExit(f"no trial benchmark for {acc}; pass --benchmark")
+        path = Path(path) if Path(path).exists() else bench_dir / path
+        sets.append((acc, validation.load_benchmark(path)))
+        stem = path.stem
+    scores, summary = validation.roc_table(sets, [Path(r) for r in args.results], args.threshold)
+    if len(sets) == 1:
+        name = args.datasets[0]
+        title = f"{name}: drug rankings vs trial outcomes ({stem})"
+    else:
+        name = args.name or "pooled"
+        title = f"{len(sets)} datasets pooled: drug rankings vs each disease's trial outcomes"
+    out = validation.write_roc(scores, summary, title, Path(args.out) / name)
     print(summary.drop(columns=["fpr", "tpr"]).round(3).to_string(index=False))
     print(f"figure: {out / 'roc.png'}")
     return 0
@@ -196,9 +210,11 @@ def main(argv: list[str] | None = None) -> int:
     vp.set_defaults(func=_cmd_validate)
 
     rp = sub.add_parser("roc", help="ROC curve of each drug ranking against known clinical trial outcomes")
-    rp.add_argument("dataset", help="accession whose disease the benchmark covers, e.g. GSE14520")
-    rp.add_argument("--benchmark", default=str(Path(__file__).parent / "benchmarks" / "hcc_trials.tsv"),
-                    help="TSV with drug and outcome (positive/negative) columns")
+    rp.add_argument("datasets", nargs="+",
+                    help="accessions; several are pooled, each scored against its own disease's benchmark")
+    rp.add_argument("--benchmark", help="TSV with drug and outcome (positive/negative) columns "
+                    "(default: the curated benchmark for each dataset's disease)")
+    rp.add_argument("--name", help="output folder name when pooling (default: pooled)")
     rp.add_argument("--threshold", type=float, default=90.0,
                     help="percentile (100 = top) at or above which a drug counts as identified (default 90)")
     rp.add_argument("--results", action="append", default=None,

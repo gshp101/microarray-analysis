@@ -1,0 +1,23 @@
+drug	outcome	trial	note
+fluorouracil	positive	5-FU/leucovorin adjuvant and metastatic RCTs	backbone; approved
+leucovorin	positive	5-FU/leucovorin RCTs	backbone; approved
+capecitabine	positive	X-ACT (phase III, 2005)	approved
+oxaliplatin	positive	MOSAIC (2004); de Gramont (2000)	approved
+irinotecan	positive	Saltz (2000); Douillard (2000)	approved
+bevacizumab	positive	AVF2107g (phase III, 2004)	OS gain; approved
+cetuximab	positive	CRYSTAL (2009); CO.17 (2007)	RAS wild-type; approved
+panitumumab	positive	PRIME (phase III, 2010)	RAS wild-type; approved
+aflibercept	positive	VELOUR (phase III, 2012)	OS gain; approved
+ramucirumab	positive	RAISE (phase III, 2015)	OS gain; approved
+regorafenib	positive	CORRECT (phase III, 2013)	OS gain; approved
+trifluridine	positive	RECOURSE (phase III, 2015)	with tipiracil; approved
+encorafenib	positive	BEACON (phase III, 2019)	BRAF V600E; approved
+fruquintinib	positive	FRESCO (2018); FRESCO-2 (2023)	approved
+vatalanib	negative	CONFIRM-1 / CONFIRM-2 (2011)	no OS gain
+cediranib	negative	HORIZON III (2012)	not better than bevacizumab
+brivanib	negative	CO.20 (phase III, 2013)	no OS gain added to cetuximab
+sunitinib	negative	phase III with FOLFIRI (2012)	stopped for futility
+napabucasin	negative	CanStem303C (phase III, 2022)	no OS gain
+nintedanib	negative	LUME-Colon 1 (phase III, 2017)	no OS gain
+perifosine	negative	X-PECT (phase III, 2012)	no OS gain
+tivantinib	negative	randomized phase II (2015)	no gain added to cetuximab/irinotecan
