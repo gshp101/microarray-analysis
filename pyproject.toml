@@ -3,6 +3,8 @@ name = "microarray-pathways"
 version = "0.2.0"
 description = "Find metabolic pathways affected in public gene expression microarray studies"
 requires-python = ">=3.10"
+license = "Unlicense"
+license-files = ["LICENSE"]
 dependencies = ["gseapy", "matplotlib", "numpy", "pandas", "requests", "scipy", "statsmodels"]
 
 [project.optional-dependencies]
@@ -12,7 +14,7 @@ dev = ["pytest"]
 microarray-pathways = "microarray_pathways.cli:main"
 
 [build-system]
-requires = ["setuptools>=64"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
