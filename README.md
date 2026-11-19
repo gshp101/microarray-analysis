@@ -177,9 +177,9 @@ mixed model would be somewhat more powerful.
 
 ## License
 
-The code in this repository is released into the public domain under the
-[Unlicense](LICENSE): you may copy, modify, use and distribute it for any purpose
-without asking or crediting anyone. The license covers only this repository's own
+The code in this repository is released under the [MIT License](LICENSE): you may
+copy, modify, use and distribute it for any purpose, as long as the copyright notice
+and license text are kept with copies of it. The license covers only this repository's own
 code and files. The data the tool downloads at run time keeps its providers' terms:
 KEGG (pathways, KEGG DRUG) is free for academic use but needs a license from
 Pathway Solutions for commercial use; GEO, Reactome, Enrichr/LINCS L1000, DepMap and
