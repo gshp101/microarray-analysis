@@ -3,7 +3,7 @@ name = "microarray-pathways"
 version = "0.2.0"
 description = "Find metabolic pathways affected in public gene expression microarray studies"
 requires-python = ">=3.10"
-license = "Unlicense"
+license = "MIT"
 license-files = ["LICENSE"]
 dependencies = ["gseapy", "matplotlib", "numpy", "pandas", "requests", "scipy", "statsmodels"]
 
