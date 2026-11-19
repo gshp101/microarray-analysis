@@ -4,6 +4,12 @@ Python tools that take a public gene expression microarray study (GEO) comparing
 groups, such as Alzheimer's vs control or tumor vs normal, and report which metabolic
 pathways are affected.
 
+## Tutorial
+
+[docs/tutorial.html](docs/tutorial.html) walks through the pipeline step by step on the
+liver cancer study (GSE14520), from the GEO series matrix to pathways and drug leads, with the
+real numbers and charts from each step. Download it and open it in a browser.
+
 ## Status
 
 - Step 1 (load datasets): done; all six curated datasets load with the group sizes
