@@ -1,0 +1,853 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PathRx Web</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a lab-notebook column of numbered pipeline steps (the order is the pipeline's), each unlocking the next; a sticky rail shows where you are. Tokens shared with docs/tutorial.html. */
+:root{
+  --bg:#f6f8f8; --surface:#ffffff; --ink:#14232b; --muted:#566a73; --line:#d6e0e3;
+  --accent:#0f7c84; --accent-ink:#ffffff; --accent-soft:#e0f1f2;
+  --up:#d1453b; --down:#2f6fd0; --neutral:#b9c3c6; --warn-bg:#fff6e0; --warn-line:#e6c36a; --err:#b3261e;
+  --code-bg:#eef3f4;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0d1619; --surface:#132128; --ink:#e4edef; --muted:#93a8ae; --line:#24363d;
+  --accent:#4cc3c9; --accent-ink:#06282b; --accent-soft:#16343a; --up:#f0705f; --down:#6aa3f5; --neutral:#4a5a60;
+  --warn-bg:#2e2611; --warn-line:#7a6326; --err:#ff8a80; --code-bg:#0f1c21; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d1619; --surface:#132128; --ink:#e4edef; --muted:#93a8ae; --line:#24363d;
+  --accent:#4cc3c9; --accent-ink:#06282b; --accent-soft:#16343a; --up:#f0705f; --down:#6aa3f5; --neutral:#4a5a60;
+  --warn-bg:#2e2611; --warn-line:#7a6326; --err:#ff8a80; --code-bg:#0f1c21; color-scheme:dark}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
+body{background:var(--bg);color:var(--ink);font:400 16px/1.55 var(--f-body);margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding-block:0 64px;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px))}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;line-height:1.15;margin:0}
+h1{font-size:clamp(1.9rem,4.5vw,2.8rem);font-weight:700;letter-spacing:-.02em}
+h2{font-size:clamp(1.3rem,2.6vw,1.6rem);font-weight:700}
+h3{font-size:1.02rem;font-weight:700}
+p{margin:0}
+a{color:var(--accent)}
+code,.mono{font-family:var(--f-mono);font-size:.86em}
+code{background:var(--code-bg);padding:1px 5px;border-radius:4px}
+.muted{color:var(--muted)}
+.num{font-variant-numeric:tabular-nums}
+.eyebrow{font:600 11.5px/1 var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+
+header.top{display:flex;flex-wrap:wrap;gap:16px 32px;align-items:end;justify-content:space-between;padding-block:40px 24px;border-bottom:1px solid var(--line)}
+header.top .lede{color:var(--muted);max-width:62ch;margin-top:10px}
+.engine{display:flex;flex-direction:column;gap:6px;align-items:flex-end;min-width:0}
+.pill{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font:600 12.5px/1.2 var(--f-mono)}
+.pill .dot{width:8px;height:8px;border-radius:50%;background:var(--neutral)}
+.pill.ready .dot{background:#2e9e5b}
+.pill.busy .dot{background:var(--accent);animation:pulse 1s infinite alternate}
+.pill.failed .dot{background:var(--err)}
+@keyframes pulse{from{opacity:.35}to{opacity:1}}
+
+.layout{display:grid;grid-template-columns:200px minmax(0,1fr);gap:36px;margin-top:28px}
+nav.rail{position:sticky;top:calc(env(safe-area-inset-top, 0px) + 16px);align-self:start;display:grid;gap:2px}
+nav.rail a{display:grid;grid-template-columns:26px 1fr;gap:8px;align-items:center;padding:6px 8px;border-radius:6px;color:var(--muted);text-decoration:none;font-size:.93rem}
+nav.rail a .n{font:600 12px/1 var(--f-mono);width:22px;height:22px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--line);background:var(--surface)}
+nav.rail a.done .n{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+nav.rail a.open{color:var(--ink)}
+nav.rail a.locked{opacity:.55}
+nav.rail a:hover{background:var(--accent-soft)}
+@media (max-width: 860px){.layout{grid-template-columns:minmax(0,1fr)} nav.rail{display:none}}
+
+section.step{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:22px clamp(16px,3vw,28px);display:grid;gap:16px;margin-bottom:22px;scroll-margin-top:16px}
+section.step.locked{opacity:.6}
+section.step.locked .body{display:none}
+section.step:not(.locked) .locked-note{display:none}
+.step-head{display:flex;gap:14px;align-items:baseline;flex-wrap:wrap}
+.step-head .n{font:600 13px/1 var(--f-mono);color:var(--accent)}
+.step-head .state{margin-left:auto;font:600 11.5px/1 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.step-head .state.stale{color:var(--up)}
+.body{display:grid;gap:16px;min-width:0}
+.why{color:var(--muted);max-width:75ch}
+.locked-note{color:var(--muted);font-size:.93rem}
+
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+.field{display:grid;gap:4px;min-width:0}
+.field label{font:600 11.5px/1.2 var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+input[type=text],input[type=search],input[type=number],select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:8px 10px;min-width:0}
+input.mono{font-family:var(--f-mono);font-size:.9rem}
+input:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button{font:600 15px/1 var(--f-body);border-radius:7px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);padding:10px 16px;cursor:pointer}
+button.ghost{background:transparent;color:var(--accent)}
+button.small{font-size:13px;padding:6px 10px}
+button:disabled{opacity:.5;cursor:not-allowed}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:400 13px/1.2 var(--f-body);border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:5px 10px;cursor:pointer;text-align:left}
+.chip:hover{border-color:var(--accent)}
+.chip b{font-family:var(--f-mono);font-weight:600;font-size:.85em;color:var(--muted);margin-left:4px}
+
+.results{display:grid;gap:8px}
+.hit{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 16px;align-items:start;border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:var(--bg)}
+.hit .acc{font:600 14px/1.3 var(--f-mono);color:var(--accent)}
+.hit .t{font-weight:600}
+.hit .meta{font-size:.88rem;color:var(--muted)}
+.hit .sum{grid-column:1/-1;font-size:.9rem;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+.stats{display:flex;flex-wrap:wrap;gap:10px}
+.stat{border:1px solid var(--line);border-radius:9px;padding:10px 14px;background:var(--bg);min-width:120px}
+.stat .v{font:600 1.35rem/1.1 var(--f-display);font-variant-numeric:tabular-nums}
+.stat .v.up{color:var(--up)} .stat .v.down{color:var(--down)}
+.stat .k{font-size:.82rem;color:var(--muted)}
+.notes{font:400 13px/1.5 var(--f-mono);background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;white-space:pre-wrap;overflow-x:auto;margin:0}
+.warn{background:var(--warn-bg);border:1px solid var(--warn-line);border-radius:9px;padding:10px 14px;font-size:.94rem}
+.error{border:1px solid var(--err);color:var(--err);border-radius:9px;padding:10px 14px;font-size:.94rem;white-space:pre-wrap}
+.error details{color:var(--muted);margin-top:6px}
+.error pre{font:12px/1.4 var(--f-mono);overflow-x:auto}
+.figure{border:1px solid var(--line);border-radius:9px;background:#fff;padding:6px;max-width:820px}
+.figure img{display:block;width:100%;height:auto}
+.findings{max-width:80ch}
+
+.progress{display:grid;gap:4px;font-size:.88rem;color:var(--muted)}
+.bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);width:0;transition:width .15s}
+
+.tbl{display:grid;gap:8px;min-width:0}
+.tbl-tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.tbl-tools input{flex:1 1 200px;max-width:320px;padding:6px 9px;font-size:.9rem}
+.tbl-tools .count{font-size:.85rem;color:var(--muted)}
+.tbl-scroll{overflow:auto;max-height:420px;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{padding:5px 9px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;white-space:nowrap}
+td.wrap{white-space:normal;min-width:220px;max-width:460px}
+th{position:sticky;top:0;background:var(--surface);font:600 11.5px/1.3 var(--f-mono);letter-spacing:.04em;color:var(--muted);cursor:pointer;user-select:none;z-index:1}
+th:hover{color:var(--ink)}
+td.n{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--f-mono);font-size:12.5px}
+tr.g-case td:first-child{box-shadow:inset 3px 0 var(--up)}
+tr.g-control td:first-child{box-shadow:inset 3px 0 var(--down)}
+.tag{font:600 11px/1 var(--f-mono);padding:3px 7px;border-radius:999px;border:1px solid var(--line);display:inline-block}
+.tag.case{color:var(--up);border-color:var(--up)} .tag.control{color:var(--down);border-color:var(--down)}
+.tag.off{color:var(--muted)}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.tabs button{background:transparent;border:0;border-bottom:2px solid transparent;border-radius:0;color:var(--muted);padding:8px 12px;font-size:14px}
+.tabs button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--accent)}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:14px}
+.group-box{border:1px solid var(--line);border-radius:9px;padding:12px;display:grid;gap:8px;background:var(--bg)}
+.group-box.case{border-left:4px solid var(--up)} .group-box.control{border-left:4px solid var(--down)}
+.group-box.active{outline:2px solid var(--accent)}
+iframe.report{width:100%;height:80vh;border:1px solid var(--line);border-radius:9px;background:#fff}
+details.settings{border:1px solid var(--line);border-radius:9px;padding:10px 14px;background:var(--surface)}
+details.settings summary{cursor:pointer;font-weight:600}
+details.settings .inner{display:grid;gap:10px;margin-top:10px}
+footer{margin-top:28px;color:var(--muted);font-size:.9rem;display:grid;gap:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">PathRx · in your browser</div>
+      <h1>From a GEO microarray to affected pathways</h1>
+      <p class="lede">Search GEO for a two-group microarray study, label the samples, then run each PathRx step and look at what it produced before moving on. The Python runs on this page with Pyodide; nothing is sent to a server except the downloads from public databases.</p>
+    </div>
+    <div class="engine">
+      <span class="pill busy" id="engine"><span class="dot"></span><span id="engine-text">Starting Python…</span></span>
+      <span class="muted mono" id="engine-sub" style="font-size:12px"></span>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="rail" id="rail" aria-label="Pipeline steps"></nav>
+    <main id="steps">
+
+      <details class="settings" id="settings" style="margin-bottom:22px">
+        <summary>Data sources and KEGG access</summary>
+        <div class="inner">
+          <p class="why">GEO, Reactome, Enrichr (LINCS L1000, DepMap) and the protein network all allow requests from a web page. <b>KEGG does not</b>: rest.kegg.jp sends no CORS headers, so browsers block it. Without KEGG, the KEGG pathway sets, the drug-target route and network proximity are skipped. To include them, run the page with <code>python web/serve.py</code> (it forwards <code>/kegg/</code> to KEGG), or point this at your own KEGG proxy. KEGG data is free for academic use and needs a license for commercial use.</p>
+          <div class="row">
+            <div class="field" style="flex:1 1 320px"><label for="kegg-proxy">KEGG proxy prefix</label>
+              <input type="text" class="mono" id="kegg-proxy" placeholder="e.g. ./kegg/  or  https://my-worker.example.workers.dev/"></div>
+            <button class="ghost" id="kegg-test">Test</button>
+          </div>
+          <p class="muted" id="kegg-status" style="font-size:.9rem">KEGG: not set.</p>
+          <div class="row"><span class="muted" id="cache-info" style="font-size:.9rem">Downloads are kept in this browser between visits.</span>
+            <button class="ghost small" id="cache-clear">Clear downloads</button></div>
+        </div>
+      </details>
+
+      <!-- 1 -->
+      <section class="step" id="s-search" data-n="1" data-title="Find a dataset">
+        <div class="step-head"><span class="n">01</span><h2>Find a dataset</h2><span class="state"></span></div>
+        <div class="body">
+          <p class="why">Searches GEO DataSets for human series profiled by microarray. Pick one to load, or type an accession you already know.</p>
+          <form class="row" id="search-form">
+            <div class="field" style="flex:1 1 300px"><label for="q">Search GEO</label>
+              <input type="search" id="q" placeholder="e.g. hepatocellular carcinoma tumor non-tumor" value="Alzheimer hippocampus"></div>
+            <button type="submit">Search</button>
+          </form>
+          <div class="field"><label>Studies PathRx has checked</label>
+            <div class="chips" id="presets"></div></div>
+          <form class="row" id="acc-form">
+            <div class="field"><label for="acc">Or load an accession</label>
+              <input type="text" class="mono" id="acc" placeholder="GSE14520" size="12"></div>
+            <button type="submit" class="ghost">Load</button>
+          </form>
+          <div id="search-out" class="results"></div>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section class="step locked" id="s-load" data-n="2" data-title="Load the series">
+        <div class="step-head"><span class="n">02</span><h2>Load the series</h2><span class="state"></span></div>
+        <p class="locked-note">Pick a dataset first.</p>
+        <div class="body">
+          <p class="why">Downloads the series matrix (normalized values and sample descriptions) and the platform annotation that maps each probe to a gene. Large studies are tens of megabytes.</p>
+          <div id="load-out" class="body"></div>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section class="step locked" id="s-groups" data-n="3" data-title="Define the groups">
+        <div class="step-head"><span class="n">03</span><h2>Define the groups</h2><span class="state"></span></div>
+        <p class="locked-note">Load a series first.</p>
+        <div class="body">
+          <p class="why">Each group is a regular expression matched, ignoring case, against every sample's title, source and characteristics. Samples that match neither group, or both, are left out. Click a value below to add it to the selected group.</p>
+          <div id="fields" class="body"></div>
+          <div class="two">
+            <div class="group-box case active" data-g="case">
+              <div class="row"><div class="field" style="flex:0 1 150px"><label for="g-case-name">Case group</label><input type="text" id="g-case-name" value="case"></div>
+              <div class="field" style="flex:1 1 180px"><label for="g-case-rx">matches</label><input type="text" class="mono" id="g-case-rx"></div></div>
+            </div>
+            <div class="group-box control" data-g="control">
+              <div class="row"><div class="field" style="flex:0 1 150px"><label for="g-control-name">Control group</label><input type="text" id="g-control-name" value="control"></div>
+              <div class="field" style="flex:1 1 180px"><label for="g-control-rx">matches</label><input type="text" class="mono" id="g-control-rx"></div></div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="field" style="flex:1 1 220px"><label for="g-filter">Keep only samples matching (optional)</label><input type="text" class="mono" id="g-filter"></div>
+            <div class="field" style="flex:1 1 220px"><label for="g-exclude">Drop samples matching (optional)</label><input type="text" class="mono" id="g-exclude"></div>
+          </div>
+          <div class="row"><div id="group-counts" class="chips"></div></div>
+          <div id="group-table"></div>
+          <div class="row"><button id="apply-groups">Build gene table</button></div>
+          <div id="groups-out" class="body"></div>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section class="step locked" id="s-de" data-n="4" data-title="Differential expression">
+        <div class="step-head"><span class="n">04</span><h2>Differential expression</h2><span class="state"></span></div>
+        <p class="locked-note">Define the groups first.</p>
+        <div class="body">
+          <p class="why">For every gene: log2 fold change (case mean minus control mean), Welch's t-test, and Benjamini-Hochberg false discovery rate.</p>
+          <div class="row">
+            <div class="field"><label for="de-fdr">FDR below</label><input type="number" id="de-fdr" value="0.05" step="0.01" min="0.001" max="0.5" style="width:100px"></div>
+            <div class="field"><label for="de-lfc">|log2 FC| at least</label><input type="number" id="de-lfc" value="1" step="0.25" min="0" max="5" style="width:100px"></div>
+            <button id="run-de">Run</button>
+          </div>
+          <div id="de-out" class="body"></div>
+        </div>
+      </section>
+
+      <!-- 5 -->
+      <section class="step locked" id="s-sets" data-n="5" data-title="Pathway gene sets">
+        <div class="step-head"><span class="n">05</span><h2>Pathway gene sets</h2><span class="state"></span></div>
+        <p class="locked-note">Run differential expression first.</p>
+        <div class="body">
+          <p class="why">Reactome pathways under "Metabolism" (and KEGG's metabolism maps, when KEGG is reachable). Sets made mostly of ribosome, proteasome or nuclear pore genes are dropped because they track housekeeping, not metabolism.</p>
+          <div class="row">
+            <div class="field"><label for="scope">Pathways</label>
+              <select id="scope"><option value="metabolic">Metabolic</option><option value="signaling">Signaling</option><option value="all">Metabolic and signaling</option></select></div>
+            <button id="run-sets">Load gene sets</button>
+          </div>
+          <div id="sets-out" class="body"></div>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section class="step locked" id="s-path" data-n="6" data-title="Score pathways">
+        <div class="step-head"><span class="n">06</span><h2>Score pathways</h2><span class="state"></span></div>
+        <p class="locked-note">Load gene sets first.</p>
+        <div class="body">
+          <p class="why">Two methods. <b>GSEA</b> ranks every gene by its t statistic and asks whether a pathway's genes bunch up at the top or bottom; it catches pathways where many genes move a little. <b>ORA</b> asks whether the significant up (or down) genes fall in a pathway more often than chance.</p>
+          <div class="row">
+            <div class="field"><label for="perms">GSEA permutations</label>
+              <select id="perms"><option value="200">200 (quick look)</option><option value="1000" selected>1000 (as the command line)</option></select></div>
+            <button id="run-path">Run</button>
+          </div>
+          <div id="path-out" class="body"></div>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section class="step locked" id="s-drugs" data-n="7" data-title="Drug leads">
+        <div class="step-head"><span class="n">07</span><h2>Drug leads</h2><span class="state"></span></div>
+        <p class="locked-note">Score pathways first.</p>
+        <div class="body">
+          <p class="why">Takes the genes that drive the shifted pathways and finds existing drugs two ways: drugs acting on those genes in the direction that would push them back (KEGG DRUG), and compounds whose LINCS L1000 expression signature is the opposite of the disease. These are research leads, not treatment advice.</p>
+          <div class="row"><button id="run-drugs">Run</button></div>
+          <div id="drugs-out" class="body"></div>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section class="step locked" id="s-prox" data-n="8" data-title="Network proximity">
+        <div class="step-head"><span class="n">08</span><h2>Network proximity</h2><span class="state"></span></div>
+        <p class="locked-note">Run drug leads first.</p>
+        <div class="body">
+          <p class="why">Ranks KEGG drugs by how close their targets sit to the pathway-driving genes in the human protein interaction network, against random protein sets of the same size and connectivity (Guney et al. 2016). Negative z means closer than chance.</p>
+          <div class="row">
+            <div class="field"><label for="reps">Random reference sets</label>
+              <select id="reps"><option value="200">200 (quick look)</option><option value="1000" selected>1000 (as the command line)</option></select></div>
+            <button id="run-prox">Run</button>
+          </div>
+          <div id="prox-out" class="body"></div>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section class="step locked" id="s-depmap" data-n="9" data-title="Cell line dependencies">
+        <div class="step-head"><span class="n">09</span><h2>Cell line dependencies</h2><span class="state"></span></div>
+        <p class="locked-note">Run drug leads first.</p>
+        <div class="body">
+          <p class="why">For cancer data only. Flags pathway-driving genes that DepMap cancer cell lines of the same tissue need to grow, more often than other cell lines do. Skip it for other diseases.</p>
+          <div class="row">
+            <div class="field"><label for="lineage">Tissue of matching cell lines</label>
+              <select id="lineage"><option value="">Not cancer, skip</option></select></div>
+            <button class="ghost" id="load-lineages">List tissues</button>
+            <button id="run-depmap">Run</button>
+          </div>
+          <div id="depmap-out" class="body"></div>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section class="step locked" id="s-report" data-n="10" data-title="Report">
+        <div class="step-head"><span class="n">10</span><h2>Report</h2><span class="state"></span></div>
+        <p class="locked-note">Score pathways first.</p>
+        <div class="body">
+          <p class="why">The same self-contained HTML report the command line writes, from the steps run so far.</p>
+          <div class="row"><button id="run-report">Build report</button><button class="ghost" id="dl-report" hidden>Download report.html</button></div>
+          <div id="report-out" class="body"></div>
+        </div>
+      </section>
+
+      <footer>
+        <p>PathRx is MIT licensed. Source: <a href="https://github.com/gshp101/microarray-analysis">github.com/gshp101/microarray-analysis</a>. GSEA here is a NumPy port of the preranked method; on GSE14520 it gives the same enrichment scores as gseapy and NES within about 0.2.</p>
+      </footer>
+    </main>
+  </div>
+</div>
+
+<script>
+"use strict";
+const $ = (s, el = document) => el.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const store = {get(k){try{return localStorage.getItem(k)}catch(e){return null}}, set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+
+// ------------------------------------------------------------------ worker
+const params = new URLSearchParams(location.search);
+const CONFIG = {
+  pyodide: params.get("pyodide") || "https://cdn.jsdelivr.net/pyodide/v0.29.5/full/",
+  bundle: new URL("pathrx.zip", location.href).href,
+};
+let worker, nextId = 1;
+const pending = new Map();
+const progressSinks = [];
+
+function startWorker() {
+  worker = new Worker("worker.js");
+  worker.onmessage = (ev) => {
+    const m = ev.data;
+    if (m.type === "status") { setEngine("busy", m.text); return; }
+    if (m.type === "progress") { progressSinks.forEach((f) => f(m)); return; }
+    const p = pending.get(m.id); pending.delete(m.id);
+    if (!p) return;
+    m.ok ? p.resolve(m.result) : p.reject(Object.assign(new Error(m.error), {traceback: m.traceback}));
+  };
+  worker.onerror = (e) => setEngine("failed", "Python failed to start: " + (e.message || "worker error"));
+}
+function call(fn, ...args) {
+  return new Promise((resolve, reject) => {
+    const id = nextId++;
+    pending.set(id, {resolve, reject});
+    worker.postMessage({id, fn, args});
+  });
+}
+async function py(fn, ...args) { const r = await call(fn, ...args); return r ? JSON.parse(r) : r; }
+
+function setEngine(state, text) {
+  const el = $("#engine"); el.className = "pill " + state; $("#engine-text").textContent = text;
+}
+
+// ------------------------------------------------------------------ steps
+const STEPS = [...document.querySelectorAll("section.step")];
+function renderRail() {
+  $("#rail").innerHTML = STEPS.map((s) => {
+    const cls = s.classList.contains("done") ? "done" : s.classList.contains("locked") ? "locked" : "open";
+    return `<a href="#${s.id}" class="${cls}"><span class="n">${s.dataset.n}</span><span>${esc(s.dataset.title)}</span></a>`;
+  }).join("");
+}
+function unlock(id) { $("#" + id).classList.remove("locked"); renderRail(); }
+function markDone(id, label = "done") {
+  const s = $("#" + id); s.classList.add("done"); s.classList.remove("locked");
+  const st = $(".state", s); st.textContent = label; st.classList.remove("stale"); renderRail();
+}
+// re-running a step makes everything after it out of date
+const ORDER = ["s-search","s-load","s-groups","s-de","s-sets","s-path","s-drugs","s-prox","s-depmap","s-report"];
+function invalidateAfter(id, lockFrom) {
+  const i = ORDER.indexOf(id);
+  ORDER.slice(i + 1).forEach((sid, j) => {
+    const s = $("#" + sid);
+    if (s.classList.contains("done")) { s.classList.remove("done"); const st = $(".state", s); st.textContent = "out of date, run again"; st.classList.add("stale"); }
+    if (lockFrom !== undefined && i + 1 + j >= ORDER.indexOf(lockFrom)) s.classList.add("locked");
+  });
+  renderRail();
+}
+
+let busy = false;
+async function runStep(sectionId, outEl, fn) {
+  if (busy) return;
+  busy = true;
+  document.querySelectorAll("main button").forEach((b) => b.disabled = true);
+  const prog = document.createElement("div"); prog.className = "progress";
+  prog.innerHTML = `<span>Working…</span><div class="bar"><i></i></div>`;
+  outEl.replaceChildren(prog);
+  const sink = (m) => {
+    const mb = (x) => (x / 1048576).toFixed(1);
+    $("span", prog).textContent = m.done ? `Downloaded ${m.label} (${mb(m.loaded)} MB). Computing…`
+      : `Downloading ${m.label}: ${mb(m.loaded)}${m.total ? " of " + mb(m.total) : ""} MB`;
+    $("i", prog).style.width = m.total ? Math.min(100, 100 * m.loaded / m.total) + "%" : "40%";
+  };
+  progressSinks.push(sink);
+  setEngine("busy", "Running…");
+  const t0 = performance.now();
+  try {
+    await fn();
+    const secs = ((performance.now() - t0) / 1000).toFixed(1);
+    const st = $(".state", $("#" + sectionId));
+    markDone(sectionId, `done in ${secs}s`);
+  } catch (e) {
+    console.error(e);
+    outEl.replaceChildren(errorBox(e));
+  } finally {
+    progressSinks.splice(progressSinks.indexOf(sink), 1);
+    prog.remove();
+    busy = false;
+    document.querySelectorAll("main button").forEach((b) => b.disabled = false);
+    setEngine("ready", "Python ready");
+  }
+}
+function errorBox(e) {
+  const d = document.createElement("div"); d.className = "error";
+  d.innerHTML = `<b>This step failed.</b> ${esc(e.message)}` +
+    (e.traceback ? `<details><summary>Python traceback</summary><pre>${esc(e.traceback)}</pre></details>` : "");
+  return d;
+}
+
+// ------------------------------------------------------------------ rendering helpers
+const NUM_FMT = (v) => {
+  if (v === null || v === undefined || v === "") return "";
+  if (typeof v !== "number") return v;
+  if (Number.isInteger(v)) return v.toLocaleString();
+  const a = Math.abs(v);
+  if (a !== 0 && (a < 1e-3 || a >= 1e5)) return v.toExponential(2);
+  return v.toFixed(a < 1 ? 4 : a < 100 ? 3 : 1).replace(/\.?0+$/, (m) => m.includes(".") ? "" : m);
+};
+const WRAP_COLS = /^(genes|leading_edge|pathways|efficacy|targets|reversed_genes|title|description|summary|characteristics|source_name)/;
+
+function stats(items) {
+  return `<div class="stats">${items.map(([v, k, cls]) =>
+    `<div class="stat"><div class="v ${cls || ""}">${esc(typeof v === "number" ? v.toLocaleString() : v)}</div><div class="k">${esc(k)}</div></div>`).join("")}</div>`;
+}
+function figure(b64, alt) { return `<div class="figure"><img alt="${esc(alt)}" src="data:image/png;base64,${b64}"></div>`; }
+
+function tableView(t, opts = {}) {
+  // t: {name, columns, rows, total}; opts.rowClass(row) -> class
+  const el = document.createElement("div"); el.className = "tbl";
+  let rows = t.rows.slice(), shown = 50, sortCol = -1, asc = true, filter = "";
+  const numeric = t.columns.map((_, i) => t.rows.some((r) => typeof r[i] === "number") && t.rows.every((r) => r[i] === null || typeof r[i] === "number"));
+  el.innerHTML = `<div class="tbl-tools">
+      <input type="search" placeholder="Filter rows" aria-label="Filter ${esc(t.name)}">
+      <span class="count"></span>
+      ${opts.download === false ? "" : `<button class="ghost small dl">Download ${esc(t.name)}.tsv</button>`}
+    </div><div class="tbl-scroll"><table><thead><tr>${t.columns.map((c, i) => `<th data-i="${i}">${esc(c)}</th>`).join("")}</tr></thead><tbody></tbody></table></div>
+    <div class="row"><button class="ghost small more" hidden>Show more rows</button></div>`;
+  const tbody = $("tbody", el);
+  function draw() {
+    let view = filter ? rows.filter((r) => r.some((v) => String(v ?? "").toLowerCase().includes(filter))) : rows;
+    const cap = view.slice(0, shown);
+    tbody.innerHTML = cap.map((r) => `<tr class="${opts.rowClass ? opts.rowClass(r) : ""}">${r.map((v, i) => {
+      const cls = numeric[i] ? "n" : WRAP_COLS.test(t.columns[i]) && String(v ?? "").length > 40 ? "wrap" : "";
+      let txt = typeof v === "boolean" ? (v ? "yes" : "") : opts.cell ? opts.cell(t.columns[i], v) : NUM_FMT(v);
+      if (!opts.cell && typeof txt === "string" && txt.length > 240) txt = `<span title="${esc(txt)}">${esc(txt.slice(0, 237))}…</span>`;
+      else if (!opts.cell) txt = esc(txt);
+      return `<td class="${cls}">${txt}</td>`;
+    }).join("")}</tr>`).join("");
+    const more = t.total > t.rows.length ? ` (first ${t.rows.length.toLocaleString()} of ${t.total.toLocaleString()} here; the download has all)` : "";
+    $(".count", el).textContent = `${Math.min(shown, view.length).toLocaleString()} of ${view.length.toLocaleString()} rows${more}`;
+    $(".more", el).hidden = view.length <= shown;
+  }
+  $("thead", el).addEventListener("click", (e) => {
+    const th = e.target.closest("th"); if (!th) return;
+    const i = +th.dataset.i; asc = sortCol === i ? !asc : true; sortCol = i;
+    rows.sort((a, b) => {
+      const x = a[i], y = b[i];
+      if (x === null) return 1; if (y === null) return -1;
+      return (typeof x === "number" ? x - y : String(x).localeCompare(String(y))) * (asc ? 1 : -1);
+    });
+    draw();
+  });
+  $("input", el).addEventListener("input", (e) => { filter = e.target.value.toLowerCase(); shown = 50; draw(); });
+  $(".more", el).addEventListener("click", () => { shown += 200; draw(); });
+  const dl = $(".dl", el);
+  if (dl) dl.addEventListener("click", async () => saveText(`${t.name}.tsv`, await call("table_tsv", t.name), "text/tab-separated-values"));
+  draw();
+  return el;
+}
+function saveText(name, text, type) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], {type}));
+  a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+function tabs(items) {
+  // items: [[label, element]]
+  const el = document.createElement("div"); el.className = "body";
+  const bar = document.createElement("div"); bar.className = "tabs"; bar.setAttribute("role", "tablist");
+  const panes = items.map(([label, pane], i) => {
+    const b = document.createElement("button"); b.textContent = label; b.setAttribute("role", "tab");
+    b.setAttribute("aria-selected", i === 0); bar.appendChild(b);
+    pane.hidden = i !== 0;
+    b.addEventListener("click", () => { bar.querySelectorAll("button").forEach((x) => x.setAttribute("aria-selected", x === b)); panes.forEach((p) => p.hidden = p !== pane); });
+    return pane;
+  });
+  el.append(bar, ...panes);
+  return el;
+}
+function html(s) { const d = document.createElement("div"); d.className = "body"; d.innerHTML = s; return d; }
+
+// ------------------------------------------------------------------ step 1: search
+let PRESETS = [];  // curated datasets, written from pathrx/datasets.py by build.py
+let preset = null;
+fetch("presets.json").then((r) => r.json()).then((list) => {
+  PRESETS = list.map((d) => [d.accession, d.name, {case: [d.case, d.rules[d.case]], control: [d.control, d.rules[d.control]],
+    platform: d.platform, filter: d.sample_filter, exclude: d.exclude, lineage: d.lineage}]);
+  $("#presets").innerHTML = PRESETS.map(([acc, name], i) => `<button class="chip" data-i="${i}">${esc(name)}<b>${acc}</b></button>`).join("");
+}).catch(() => { $("#presets").innerHTML = `<span class="muted">Curated list unavailable.</span>`; });
+$("#presets").addEventListener("click", (e) => {
+  const b = e.target.closest(".chip"); if (!b) return;
+  const [acc, , rules] = PRESETS[+b.dataset.i]; preset = rules; chooseSeries(acc);
+});
+$("#acc-form").addEventListener("submit", (e) => { e.preventDefault(); const a = $("#acc").value.trim().toUpperCase(); if (/^GSE\d+$/.test(a)) { preset = PRESETS.find((p) => p[0] === a)?.[2] || null; chooseSeries(a); } else $("#search-out").innerHTML = `<div class="error">Type a series accession such as GSE14520.</div>`; });
+
+const EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/";
+$("#search-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const q = $("#q").value.trim(); if (!q) return;
+  const out = $("#search-out");
+  out.innerHTML = `<p class="muted">Searching GEO…</p>`;
+  try {
+    const term = `(${q}) AND gse[ETYP] AND "expression profiling by array"[DataSet Type] AND "Homo sapiens"[Organism]`;
+    const s = await (await fetch(`${EUTILS}esearch.fcgi?db=gds&retmode=json&retmax=15&term=${encodeURIComponent(term)}`)).json();
+    const ids = s.esearchresult.idlist;
+    if (!ids.length) { out.innerHTML = `<p class="muted">No human microarray series match "${esc(q)}". Try fewer or broader words.</p>`; return; }
+    const sum = await (await fetch(`${EUTILS}esummary.fcgi?db=gds&retmode=json&id=${ids.join(",")}`)).json();
+    const recs = sum.result.uids.map((u) => sum.result[u]);
+    out.innerHTML = `<p class="muted">${Number(s.esearchresult.count).toLocaleString()} series match; showing the ${recs.length} most recent.</p>` +
+      recs.map((r) => `<div class="hit">
+        <div><span class="acc">${esc(r.accession)}</span> <span class="t">${esc(r.title)}</span>
+          <div class="meta num">${r.n_samples} samples · platform ${esc(String(r.gpl).split(";").map((g) => "GPL" + g).join(", "))} · ${esc(r.pdat)}</div></div>
+        <button class="small" data-acc="${esc(r.accession)}">Use this</button>
+        <div class="sum">${esc(r.summary)}</div></div>`).join("");
+  } catch (err) { out.replaceChildren(errorBox(err)); }
+});
+$("#search-out").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-acc]"); if (!b) return;
+  preset = PRESETS.find((p) => p[0] === b.dataset.acc)?.[2] || null;
+  chooseSeries(b.dataset.acc);
+});
+
+// ------------------------------------------------------------------ step 2: load
+let series = null;
+async function chooseSeries(acc) {
+  if (!ready) { $("#search-out").insertAdjacentHTML("afterbegin", `<p class="muted">Python is still starting; try again in a moment.</p>`); return; }
+  markDone("s-search", acc);
+  invalidateAfter("s-search", "s-groups");
+  unlock("s-load");
+  $("#s-load").scrollIntoView();
+  const out = $("#load-out");
+  await runStep("s-load", out, async () => {
+    const pl = await py("list_platforms", acc);
+    let file = pl.files[0];
+    if (pl.files.length > 1) {
+      const want = preset?.platform;
+      file = pl.files.find((f) => f.platform === want);
+      if (!file) {
+        await new Promise((resolve) => {
+          out.replaceChildren(html(`<p>${esc(acc)} was run on ${pl.files.length} platforms. PathRx analyzes one at a time; pick one.</p>
+            <div class="chips">${pl.files.map((f, i) => `<button class="chip" data-i="${i}">${esc(f.platform || f.file)}</button>`).join("")}</div>`));
+          out.addEventListener("click", function h(e) {
+            const b = e.target.closest(".chip"); if (!b) return;
+            out.removeEventListener("click", h); file = pl.files[+b.dataset.i]; resolve();
+          });
+        });
+        out.replaceChildren();
+      }
+    }
+    series = await py("load_series", acc, file.url);
+    renderLoad(series);
+  });
+  if ($("#s-load").classList.contains("done")) { unlock("s-groups"); setupGroups(); }
+}
+function renderLoad(d) {
+  const q = d.quantiles.map((x) => NUM_FMT(x)).join(" / ");
+  const out = $("#load-out");
+  out.replaceChildren(
+    html(stats([[d.accession, "series"], [d.platform, "platform"], [d.samples, "samples"], [d.probes, "probes"], [d.mapped_probes, "probes with one gene symbol"]]) +
+      `<p class="muted">Values min / 25% / median / 75% / 99% / max: <span class="mono">${esc(q)}</span>. ${d.needs_log2 ? "They look linear, so step 3 applies log2 (the GEO2R rule)." : "They already look log2-scaled."}</p>` +
+      figure(d.distribution, "Distribution of values per sample") +
+      `<h3>Sample descriptions</h3>`),
+    tableView(d.sample_table, {download: true}));
+}
+
+// ------------------------------------------------------------------ step 3: groups
+let activeGroup = "case", previewTimer = null, groupStatus = {};
+function setupGroups() {
+  const d = series;
+  const f = $("#fields");
+  f.innerHTML = d.fields.length ? d.fields.map((fl) => `<div class="field"><label>${esc(fl.column)}</label><div class="chips">${
+    fl.values.map(([v, n]) => `<button class="chip" data-v="${esc(v)}">${esc(v.length > 70 ? v.slice(0, 67) + "…" : v)}<b>${n}</b></button>`).join("")}</div></div>`).join("")
+    : `<p class="muted">No metadata field repeats across samples; write the patterns by hand from the sample table.</p>`;
+  const p = preset || {};
+  $("#g-case-name").value = p.case?.[0] || "case"; $("#g-case-rx").value = p.case?.[1] || "";
+  $("#g-control-name").value = p.control?.[0] || "control"; $("#g-control-rx").value = p.control?.[1] || "";
+  $("#g-filter").value = p.filter || ""; $("#g-exclude").value = p.exclude || "";
+  if (p.lineage) setLineage(p.lineage);
+  $("#groups-out").replaceChildren();
+  previewGroups();
+}
+document.querySelectorAll(".group-box").forEach((box) => box.addEventListener("focusin", () => {
+  activeGroup = box.dataset.g; document.querySelectorAll(".group-box").forEach((b) => b.classList.toggle("active", b === box));
+}));
+const rxEscape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+$("#fields").addEventListener("click", (e) => {
+  const b = e.target.closest(".chip"); if (!b) return;
+  const inp = $(`#g-${activeGroup}-rx`);
+  const v = rxEscape(b.dataset.v);
+  inp.value = inp.value ? `${inp.value}|${v}` : v;
+  previewGroups();
+});
+["g-case-name","g-case-rx","g-control-name","g-control-rx","g-filter","g-exclude"].forEach((id) =>
+  $("#" + id).addEventListener("input", () => { clearTimeout(previewTimer); previewTimer = setTimeout(previewGroups, 250); }));
+function groupArgs() { return ["g-case-name","g-case-rx","g-control-name","g-control-rx","g-filter","g-exclude"].map((id) => $("#" + id).value); }
+async function previewGroups() {
+  if (!series) return;
+  const r = await py("preview_groups", ...groupArgs()).catch((e) => ({error: e.message}));
+  const counts = $("#group-counts");
+  if (r.error) { counts.innerHTML = `<span class="error" style="padding:4px 10px">${esc(r.error)}</span>`; return; }
+  groupStatus = r.status;
+  const [cn, , kn] = groupArgs();
+  const order = [cn || "case", kn || "control", "unassigned", "matches both", "filtered out"];
+  counts.innerHTML = order.filter((k) => r.counts[k]).map((k) =>
+    `<span class="tag ${k === (cn || "case") ? "case" : k === (kn || "control") ? "control" : "off"}">${esc(k)}: ${r.counts[k]}</span>`).join(" ");
+  // sample table with a group column in front
+  const t = series.sample_table;
+  const view = {name: "samples_grouped", columns: ["group", ...t.columns], total: t.total,
+    rows: t.rows.map((row) => [groupStatus[row[0]] || "", ...row])};
+  const caseName = cn || "case", ctlName = kn || "control";
+  $("#group-table").replaceChildren(tableView(view, {download: false,
+    rowClass: (row) => row[0] === caseName ? "g-case" : row[0] === ctlName ? "g-control" : "",
+    cell: (col, v) => col === "group" ? `<span class="tag ${v === caseName ? "case" : v === ctlName ? "control" : "off"}">${esc(v)}</span>` : esc(NUM_FMT(v))}));
+}
+$("#apply-groups").addEventListener("click", async () => {
+  invalidateAfter("s-groups", "s-de");
+  const out = $("#groups-out");
+  await runStep("s-groups", out, async () => {
+    const r = await py("apply_groups", ...groupArgs());
+    out.replaceChildren(
+      html(stats([[r.n_case, r.case, "up"], [r.n_control, r.control, "down"], [r.unassigned, "left out"], [r.genes, "genes"]]) +
+        `<pre class="notes">${esc(r.notes.join("\n"))}</pre>` + figure(r.distribution, "log2 expression per sample by group") +
+        `<h3>Gene × sample table (log2)</h3>`),
+      tableView(r.expression));
+  });
+  if ($("#s-groups").classList.contains("done")) { unlock("s-de"); $("#s-de").scrollIntoView(); }
+});
+
+// ------------------------------------------------------------------ step 4: DE
+$("#run-de").addEventListener("click", async () => {
+  invalidateAfter("s-de", "s-sets");
+  const out = $("#de-out");
+  await runStep("s-de", out, async () => {
+    const r = await py("run_de", +$("#de-fdr").value, +$("#de-lfc").value);
+    out.replaceChildren(
+      html(stats([[r.tested, "genes tested"], [r.up, "up", "up"], [r.down, "down", "down"], [r.fdr_only, `FDR < ${$("#de-fdr").value}, any fold change`]]) +
+        figure(r.volcano, "Volcano plot")),
+      tableView(r.genes));
+  });
+  if ($("#s-de").classList.contains("done")) unlock("s-sets");
+});
+
+// ------------------------------------------------------------------ step 5: gene sets
+$("#run-sets").addEventListener("click", async () => {
+  invalidateAfter("s-sets", "s-path");
+  const out = $("#sets-out");
+  await runStep("s-sets", out, async () => {
+    const r = await py("load_gene_sets", $("#scope").value, true);
+    out.replaceChildren(
+      html(stats([[r.counts.Reactome || 0, "Reactome sets"], [r.counts.KEGG || 0, "KEGG sets"], [r.scored, "with 10 to 500 measured genes (scored)"]]) +
+        r.notes.map((n) => `<div class="warn">${esc(n)}</div>`).join("")),
+      tableView(r.sets));
+  });
+  if ($("#s-sets").classList.contains("done")) unlock("s-path");
+});
+
+// ------------------------------------------------------------------ step 6: pathways
+$("#run-path").addEventListener("click", async () => {
+  invalidateAfter("s-path", "s-drugs");
+  const out = $("#path-out");
+  await runStep("s-path", out, async () => {
+    const r = await py("run_pathways", +$("#perms").value);
+    out.replaceChildren(
+      html(stats([[r.gsea_tested, "pathways scored"], [r.gsea_sig, "GSEA FDR < 0.05"], [r.gsea_up, "of those up", "up"], [r.gsea_sig - r.gsea_up, "down", "down"], [r.ora_sig, "ORA FDR < 0.05"]]) +
+        `<div class="findings">${r.findings}</div>` + figure(r.chart, "Top pathways by GSEA")),
+      tabs([["GSEA", tableView(r.gsea)], ["ORA (up and down genes)", tableView(r.ora)]]));
+  });
+  if ($("#s-path").classList.contains("done")) { unlock("s-drugs"); unlock("s-report"); }
+});
+
+// ------------------------------------------------------------------ step 7: drugs
+$("#run-drugs").addEventListener("click", async () => {
+  invalidateAfter("s-drugs");
+  ["s-prox", "s-depmap"].forEach((id) => $("#" + id).classList.add("locked"));
+  const out = $("#drugs-out");
+  await runStep("s-drugs", out, async () => {
+    const r = await py("run_drugs");
+    const parts = [["Pathway-driving genes", tableView(r.genes)]];
+    if (r.kegg) parts.push(["Drugs on those genes (KEGG)", tableView(r.targets)]);
+    parts.push(["Signature reversal (L1000)", tableView(r.reversal)]);
+    out.replaceChildren(
+      html(stats([[r.n_genes, "pathway-driving genes"], [r.n_up, "of them up", "up"],
+        [r.kegg ? r.n_targets : "skipped", "KEGG drugs on them"], [r.kegg ? r.n_opposing : "skipped", "acting against the change"],
+        [r.n_compounds, "L1000 compounds scored"]]) +
+        r.notes.map((n) => `<div class="warn">${esc(n)}</div>`).join("") +
+        `<p class="muted">Signature reversal: negative z means the compound pushes these genes opposite to the disease. Rank by percentile; z is a ranking score, not a test.</p>`),
+      tabs(parts));
+  });
+  if ($("#s-drugs").classList.contains("done")) { unlock("s-prox"); unlock("s-depmap"); }
+});
+
+// ------------------------------------------------------------------ step 8: proximity
+$("#run-prox").addEventListener("click", async () => {
+  const out = $("#prox-out");
+  await runStep("s-prox", out, async () => {
+    const r = await py("run_proximity", +$("#reps").value);
+    if (r.skipped) { out.replaceChildren(html(`<div class="warn">${esc(r.skipped)}</div>`)); return; }
+    out.replaceChildren(
+      html(stats([[r.info.module_genes, `of ${r.info.pathway_genes} pathway genes in the network`], [r.info.network_nodes, "proteins in the network"],
+        [r.n_drugs, "drugs scored"], [r.n_clinical, "clinical drugs"], [r.n_close, "clinical with z < −2"]])),
+      tableView(r.proximity));
+  });
+});
+
+// ------------------------------------------------------------------ step 9: DepMap
+function setLineage(v) {
+  const sel = $("#lineage");
+  if (![...sel.options].some((o) => o.value === v)) sel.add(new Option(v, v));
+  sel.value = v;
+}
+$("#load-lineages").addEventListener("click", async () => {
+  const out = $("#depmap-out");
+  await runStep("s-depmap", out, async () => {
+    const list = await py("lineages");
+    const sel = $("#lineage"), cur = sel.value;
+    sel.innerHTML = `<option value="">Not cancer, skip</option>` + list.map(([t, n]) => `<option value="${esc(t)}">${esc(t.toLowerCase())} (${n} lines)</option>`).join("");
+    if (cur) setLineage(cur);
+    out.replaceChildren(html(`<p class="muted">${list.length} tissues listed. Pick one and run.</p>`));
+  });
+  $("#s-depmap").classList.remove("done"); $(".state", $("#s-depmap")).textContent = ""; renderRail();
+});
+$("#run-depmap").addEventListener("click", async () => {
+  const out = $("#depmap-out");
+  await runStep("s-depmap", out, async () => {
+    const r = await py("run_depmap", $("#lineage").value);
+    if (r.info.skipped) { out.replaceChildren(html(`<p class="muted">Skipped: ${esc(r.info.skipped)}.</p>`)); return; }
+    out.replaceChildren(
+      html(stats([[r.info.lineage_lines, `${r.info.lineage.toLowerCase()} cell lines`], [r.info.lines, "cell lines with a known tissue"],
+        [r.n_sig ?? 0, "genes needed more often (FDR < 0.1)"], [r.n_up_needed ?? 0, "up and needed", "up"]])),
+      r.depmap ? tableView(r.depmap) : html(`<p class="muted">No pathway-driving genes to check.</p>`));
+  });
+});
+
+// ------------------------------------------------------------------ step 10: report
+let reportHtml = "";
+$("#run-report").addEventListener("click", async () => {
+  const out = $("#report-out");
+  await runStep("s-report", out, async () => {
+    reportHtml = await call("make_report");
+    const f = document.createElement("iframe"); f.className = "report"; f.title = "PathRx report";
+    f.setAttribute("sandbox", "allow-scripts allow-same-origin"); f.srcdoc = reportHtml;
+    out.replaceChildren(f);
+    $("#dl-report").hidden = false;
+  });
+});
+$("#dl-report").addEventListener("click", () => saveText(`${series?.accession || "pathrx"}_report.html`, reportHtml, "text/html"));
+
+// ------------------------------------------------------------------ settings
+async function applyKegg(prefix) {
+  store.set("pathrx.kegg", prefix);
+  const r = await py("configure", JSON.stringify({kegg_proxy: prefix}));
+  $("#kegg-status").textContent = r.kegg ? `KEGG: using ${prefix}` : "KEGG: not set. KEGG pathway sets, the drug-target route and network proximity will be skipped.";
+}
+$("#kegg-test").addEventListener("click", async () => {
+  let p = $("#kegg-proxy").value.trim();
+  if (p && !p.endsWith("/")) p += "/";
+  if (!p) { await applyKegg(""); return; }
+  $("#kegg-status").textContent = "Testing…";
+  try {
+    const r = await fetch(new URL("info/hsa", new URL(p, location.href)).href);
+    const t = await r.text();
+    if (!r.ok || !/KEGG|hsa/i.test(t)) throw new Error(`HTTP ${r.status}`);
+    await applyKegg(p);
+  } catch (e) {
+    await applyKegg("");
+    $("#kegg-status").textContent = `KEGG proxy did not answer (${e.message}). KEGG steps will be skipped.`;
+  }
+});
+async function detectKegg() {
+  const saved = store.get("pathrx.kegg");
+  const candidates = saved !== null ? [saved] : ["./kegg/"];
+  for (const p of candidates) {
+    if (!p) continue;
+    try {
+      const r = await fetch(new URL("info/hsa", new URL(p, location.href)).href);
+      if (r.ok && /hsa/i.test(await r.text())) { $("#kegg-proxy").value = p; await applyKegg(p); return; }
+    } catch (e) { /* not available */ }
+  }
+  await applyKegg("");
+  $("#settings").open = true;
+}
+async function showCache() {
+  try { const c = await py("__cache_size__"); $("#cache-info").textContent = `Downloads kept in this browser: ${c.files} files, ${(c.bytes / 1048576).toFixed(1)} MB.`; } catch (e) {}
+}
+$("#cache-clear").addEventListener("click", async () => { await call("__clear_cache__"); showCache(); });
+
+// ------------------------------------------------------------------ start
+let ready = false;
+renderRail();
+startWorker();
+call("__init__", CONFIG).then(async (r) => {
+  const v = JSON.parse(r);
+  ready = true;
+  setEngine("ready", "Python ready");
+  $("#engine-sub").textContent = `Pyodide ${v.pyodide}`;
+  await detectKegg();
+  showCache();
+}).catch((e) => { setEngine("failed", "Python failed to start"); $("#engine-sub").textContent = e.message; });
+</script>
+</body>
+</html>

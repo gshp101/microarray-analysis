@@ -289,8 +289,24 @@ def load_series(
     if len(urls) > 1:
         raise ValueError(f"{gse} has several platforms; pass platform= one of {urls}")
     expr, samples, gpl = parse_series_matrix(fetch(urls[0], cache_dir).decode("utf-8", "replace"))
-    notes = [f"source: {urls[0]}", f"probes: {len(expr)}"]
+    return build_dataset(gse, expr, samples, gpl or platform or "", platform_symbols(gpl, cache_dir), rules,
+                         sample_filter=sample_filter, exclude=exclude, source=urls[0])
 
+
+def build_dataset(
+    gse: str,
+    expr: pd.DataFrame,
+    samples: pd.DataFrame,
+    platform: str,
+    symbols: pd.Series,
+    rules: dict[str, str],
+    sample_filter: str | None = None,
+    exclude: str | None = None,
+    source: str = "",
+) -> ExpressionDataset:
+    """Steps 3-5 of load_series on an already parsed series matrix and platform table:
+    filter samples, log2 if needed, collapse probes to genes, label groups."""
+    notes = [f"source: {source or gse}", f"probes: {len(expr)}"]
     text = sample_text(samples)
     keep = pd.Series(True, index=samples.index)
     if sample_filter:
@@ -305,11 +321,11 @@ def load_series(
         expr = log2_transform(expr)
         notes.append("values looked linear; applied log2")
 
-    genes = collapse_to_genes(expr, platform_symbols(gpl, cache_dir))
+    genes = collapse_to_genes(expr, symbols)
     notes.append(f"genes after collapsing probes: {len(genes)}")
 
     samples = samples.copy()
     samples["group"] = assign_groups(samples, rules)
     counts = samples["group"].value_counts(dropna=False).to_dict()
     notes.append(f"group counts: {counts}")
-    return ExpressionDataset(gse, gpl or platform or "", genes, samples, notes)
+    return ExpressionDataset(gse, platform, genes, samples, notes)
