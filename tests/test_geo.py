@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
 
-from microarray_pathways import geo
-from microarray_pathways.datasets import DATASETS
+from pathrx import geo
+from pathrx.datasets import DATASETS
 
 MATRIX = """!Series_title\t"toy"
 !Series_platform_id\t"GPL0"

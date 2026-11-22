@@ -1,7 +1,7 @@
-# microarray-pathways
+# PathRx
 
-Python tools that take a public gene expression microarray study (GEO) comparing two
-groups, such as Alzheimer's vs control or tumor vs normal, and report which metabolic
+PathRx is a Python tool that takes a public gene expression microarray study (GEO) comparing two
+groups, such as Alzheimer's vs control or tumor vs normal, and reports which metabolic
 pathways are affected.
 
 ## Tutorial
@@ -40,7 +40,7 @@ real numbers and charts from each step. Download it and open it in a browser.
   outrank failures (AUC), and whether the disease's own dataset ranks its positive drugs higher
   than the other datasets do. A benchmark for liver cancer (HCC) ships in `benchmarks/hcc_trials.tsv`.
 
-      microarray-pathways validate GSE14520 --controls GSE10072,GSE15852,GSE32323,GSE5281,GSE48350 \
+      pathrx validate GSE14520 --controls GSE10072,GSE15852,GSE32323,GSE5281,GSE48350 \
           --results results_drugs --results results_proximity
 
   `roc` draws ROC curves for each route, plus the best of the three, using trial outcomes as
@@ -51,29 +51,29 @@ real numbers and charts from each step. Download it and open it in a browser.
   breast, colorectal, Alzheimer's), and the drug-dataset pairs go into one curve. Pooled over
   the six curated datasets, no route does much better than chance (AUC 0.50 to 0.59).
 
-      microarray-pathways roc GSE14520 --results results_drugs --results results_proximity
-      microarray-pathways roc GSE14520 GSE10072 GSE15852 GSE32323 GSE5281 GSE48350 \
+      pathrx roc GSE14520 --results results_drugs --results results_proximity
+      pathrx roc GSE14520 GSE10072 GSE15852 GSE32323 GSE5281 GSE48350 \
           --results results_drugs --results results_proximity
 
 ## Usage
 
     pip install -e .[dev]
-    microarray-pathways list                       # curated datasets
-    microarray-pathways load alzheimers_brain      # writes data/GSE5281/
-    microarray-pathways load GSE12345 --group case='tumou?r' --group control='normal'
+    pathrx list                       # curated datasets
+    pathrx load alzheimers_brain      # writes data/GSE5281/
+    pathrx load GSE12345 --group case='tumou?r' --group control='normal'
 
-    microarray-pathways report alzheimers_brain    # writes results/GSE5281/report.html
+    pathrx report alzheimers_brain    # writes results/GSE5281/report.html
 
     # any GEO series: give two group rules (regex on sample metadata), case group first
-    microarray-pathways report GSE15852 --group tumor='tumou?r|cancer' --group normal='normal'
+    pathrx report GSE15852 --group tumor='tumou?r|cancer' --group normal='normal'
 
     # your own data: expression table (first column gene symbols, one column per sample)
     # and a sample sheet with "sample" and "group" columns
-    microarray-pathways report --expression expr.tsv --samples samples.tsv \
+    pathrx report --expression expr.tsv --samples samples.tsv \
         --case AD --control control --name my_study
 
     # cancer data: name the tissue of matching DepMap cell lines (curated datasets set it)
-    microarray-pathways report GSE12345 --group tumor='tumou?r' --group normal='normal' --lineage PANCREAS
+    pathrx report GSE12345 --group tumor='tumou?r' --group normal='normal' --lineage PANCREAS
 
 `load` writes `expression.tsv.gz` (log2, one row per gene), `samples.tsv` (metadata and
 group label) and `notes.txt`, and warns if group sizes differ from the published study.

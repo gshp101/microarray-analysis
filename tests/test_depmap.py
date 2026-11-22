@@ -1,6 +1,6 @@
 import pandas as pd
 
-from microarray_pathways import depmap, report
+from pathrx import depmap, report
 
 
 def _genes():

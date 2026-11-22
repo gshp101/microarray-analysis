@@ -449,7 +449,7 @@ def write_report(
 <main>
 <h1>{_esc(title)}</h1>
 <p class="sub">{_esc(case)} vs {_esc(control)}{' · ' + _esc(source) if source else ''} ·
-generated {dt.date.today().isoformat()} by microarray-pathways {__version__}</p>
+generated {dt.date.today().isoformat()} by PathRx {__version__}</p>
 
 <div class="stats">
  <div class="stat"><b>{genes.attrs.get('n_case', '')} / {genes.attrs.get('n_control', '')}</b>

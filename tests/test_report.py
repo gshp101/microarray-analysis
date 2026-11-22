@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from microarray_pathways import geo, report
+from pathrx import geo, report
 
 
 def _results():

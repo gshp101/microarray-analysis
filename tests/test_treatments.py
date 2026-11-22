@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from microarray_pathways import report, treatments
+from pathrx import report, treatments
 
 KEGG_ENTRY = """ENTRY       D06402                      Drug
 NAME        Pemetrexed sodium hydrate (JAN);

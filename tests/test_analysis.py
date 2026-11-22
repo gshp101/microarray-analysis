@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from microarray_pathways import de, enrichment, pathways
+from pathrx import de, enrichment, pathways
 
 
 def _toy_expression(seed=0):

@@ -22,7 +22,7 @@ import requests
 
 GEO_FTP = "https://ftp.ncbi.nlm.nih.gov/geo"
 GEO_ACC = "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi"
-DEFAULT_CACHE = Path.home() / ".cache" / "microarray_pathways"
+DEFAULT_CACHE = Path.home() / ".cache" / "pathrx"
 
 
 @dataclass

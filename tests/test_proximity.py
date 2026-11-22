@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from microarray_pathways import proximity, report
+from pathrx import proximity, report
 
 
 def _grid(n: int = 30) -> proximity.Network:
