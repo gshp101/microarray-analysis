@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from microarray_pathways import validation
+from pathrx import validation
 
 
 def _bench(tmp_path):

@@ -1,4 +1,4 @@
-"""Find metabolic pathways affected in public gene expression microarray studies."""
+"""PathRx: find metabolic pathways and drug leads affected in public gene expression microarray studies."""
 
 __version__ = "0.2.0"
 

@@ -1,11 +1,11 @@
 """Command line entry point.
 
-    python -m microarray_pathways list
-    python -m microarray_pathways load alzheimers_brain --out data/
-    python -m microarray_pathways load GSE12345 --group case='tumor' --group control='normal'
-    python -m microarray_pathways report alzheimers_brain
-    python -m microarray_pathways report GSE12345 --group tumor='tumou?r' --group normal='normal'
-    python -m microarray_pathways report --expression expr.tsv --samples samples.tsv --case AD --control CTL
+    python -m pathrx list
+    python -m pathrx load alzheimers_brain --out data/
+    python -m pathrx load GSE12345 --group case='tumor' --group control='normal'
+    python -m pathrx report alzheimers_brain
+    python -m pathrx report GSE12345 --group tumor='tumou?r' --group normal='normal'
+    python -m pathrx report --expression expr.tsv --samples samples.tsv --case AD --control CTL
 """
 
 from __future__ import annotations
@@ -156,7 +156,7 @@ def _cmd_roc(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    p = argparse.ArgumentParser(prog="microarray_pathways")
+    p = argparse.ArgumentParser(prog="pathrx")
     sub = p.add_subparsers(dest="cmd", required=True)
     sub.add_parser("list", help="list curated datasets").set_defaults(func=_cmd_list)
 

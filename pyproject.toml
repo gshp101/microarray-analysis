@@ -1,5 +1,5 @@
 [project]
-name = "microarray-pathways"
+name = "pathrx"
 version = "0.2.0"
 description = "Find metabolic pathways affected in public gene expression microarray studies"
 requires-python = ">=3.10"
@@ -11,7 +11,7 @@ dependencies = ["gseapy", "matplotlib", "numpy", "pandas", "requests", "scipy", 
 dev = ["pytest"]
 
 [project.scripts]
-microarray-pathways = "microarray_pathways.cli:main"
+pathrx = "pathrx.cli:main"
 
 [build-system]
 requires = ["setuptools>=77"]
@@ -21,7 +21,7 @@ build-backend = "setuptools.build_meta"
 where = ["src"]
 
 [tool.setuptools.package-data]
-microarray_pathways = ["benchmarks/*.tsv"]
+pathrx = ["benchmarks/*.tsv"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
