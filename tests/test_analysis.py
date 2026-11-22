@@ -91,3 +91,19 @@ def test_parse_reactome_takes_several_roots():
 def test_machinery_fraction():
     assert pathways.machinery_fraction({"RPL3", "RPS6", "PSMA1", "HK1"}) == 0.75
     assert pathways.machinery_fraction({"HK1", "PKM"}) == 0.0
+
+
+def test_numpy_gsea_matches_gseapy():
+    import pytest
+    pytest.importorskip("gseapy")
+    expr, groups = _toy_expression()
+    res = de.differential_expression(expr, groups, "case", "control")
+    sets = {"shifted": {f"G{i}" for i in range(15)}, "mixed": {f"G{i}" for i in range(10, 40)},
+            "noise": {f"G{i}" for i in range(100, 130)}}
+    a = enrichment.gsea(res, sets, permutations=500, threads=1, engine="gseapy").set_index("pathway")
+    b = enrichment.gsea(res, sets, permutations=500, engine="numpy").set_index("pathway")
+    assert np.allclose(a["es"], b.loc[a.index, "es"], atol=1e-9)
+    assert np.allclose(a["nes"], b.loc[a.index, "nes"], rtol=0.1)
+    for p in a.index:
+        assert set(a.at[p, "leading_edge"].split(";")) == set(b.at[p, "leading_edge"].split(";"))
+    assert b.at["shifted", "direction"] == "up" and b.at["shifted", "fdr"] < 0.05

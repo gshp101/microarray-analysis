@@ -10,6 +10,14 @@ pathways are affected.
 liver cancer study (GSE14520), from the GEO series matrix to pathways and drug leads, with the
 real numbers and charts from each step. Download it and open it in a browser.
 
+## Web app
+
+[web/](web/README.md) runs the same pipeline in the browser with Pyodide: search GEO, pick the
+two groups, and step through loading, differential expression, pathway scoring, drug leads,
+network proximity and DepMap, with the tables and plots of each step. `python web/serve.py`
+runs it locally with KEGG included; on a static host such as GitHub Pages, KEGG-based steps
+need a small proxy (see web/README.md).
+
 ## Status
 
 - Step 1 (load datasets): done; all six curated datasets load with the group sizes
