@@ -22,8 +22,13 @@ PKG = ROOT / "src" / "pathrx"
 
 
 def presets() -> list[dict]:
-    sys.path.insert(0, str(ROOT / "src"))
-    from pathrx import datasets
+    # load datasets.py on its own: it needs only the standard library, so the build
+    # runs without NumPy or pandas installed (as on the Pages runner)
+    import importlib.util
+    spec_ = importlib.util.spec_from_file_location("pathrx_datasets", PKG / "datasets.py")
+    datasets = importlib.util.module_from_spec(spec_)
+    sys.modules[spec_.name] = datasets
+    spec_.loader.exec_module(datasets)
 
     names = {"alzheimers_brain": "Alzheimer's brain", "alzheimers_aging_brain": "Alzheimer's, aging brain",
              "lung_adenocarcinoma": "Lung adenocarcinoma", "breast_cancer": "Breast cancer",
