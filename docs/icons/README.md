@@ -12,6 +12,6 @@ and dark backgrounds). Each is an SVG with a 512 px PNG beside it. The one in us
 
 Combinations of 1 and 4 (array grid and capsule):
 
-6. **Grid and capsule**: the array grid with a capsule laid over its corner.
+6. **Grid and capsule**: the array grid with a capsule laid over its corner (the app icon; also `icon.png` at the repo root).
 7. **Path into capsule**: the pathway through the up spots leads down into a capsule.
-8. **Capsule of spots**: a capsule whose clear half holds array spots (current default).
+8. **Capsule of spots**: a capsule whose clear half holds array spots.
