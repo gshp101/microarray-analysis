@@ -20,6 +20,7 @@ def test_build_bundles_package_glue_and_presets(tmp_path):
     liver = next(p for p in presets if p["accession"] == "GSE14520")
     assert liver["platform"] == "GPL3921" and liver["case"] in liver["rules"]
     assert (out / "index.html").exists() and (out / "worker.js").exists()
+    assert (out / "tutorial.html").exists() and 'href="tutorial.html"' in (out / "index.html").read_text()
 
 
 def test_group_preview_and_build(monkeypatch):

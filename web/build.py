@@ -4,7 +4,8 @@
 
 Writes index.html and worker.js as they are, pathrx.zip (the pathrx package plus
 the browser glue module pathrx_web.py, which the page unpacks into Pyodide) and
-presets.json (the curated datasets from pathrx/datasets.py). The output is plain
+presets.json (the curated datasets from pathrx/datasets.py), plus the step-by-step
+tutorial (docs/tutorial.html) that the page links to. The output is plain
 static files: host it on GitHub Pages or any web server.
 """
 
@@ -44,6 +45,7 @@ def build(out: Path) -> Path:
     out.mkdir(parents=True, exist_ok=True)
     for name in ("index.html", "worker.js"):
         shutil.copy2(WEB / name, out / name)
+    shutil.copy2(ROOT / "docs" / "tutorial.html", out / "tutorial.html")  # linked from the page header
     with zipfile.ZipFile(out / "pathrx.zip", "w", zipfile.ZIP_DEFLATED) as z:
         for f in sorted(PKG.rglob("*")):
             if (f.is_file() and not {"__pycache__", "desktop"} & set(f.relative_to(PKG).parts)

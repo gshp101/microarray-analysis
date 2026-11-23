@@ -33,7 +33,8 @@ loading, groups, differential expression, gene sets, pathway scoring (GSEA and O
 leads, network proximity, DepMap dependencies and the HTML report, shown in the app. Every
 table can be filtered, sorted and saved as TSV. Outputs go to `~/PathRx results/<GSE>/`
 in the same layout as `pathrx report` (change it under File > Settings); downloads share the
-command line's cache. Icon options are in [docs/icons/](docs/icons/).
+command line's cache. Help > Tutorial (F1) opens the step-by-step tutorial. Icon options are
+in [docs/icons/](docs/icons/).
 
 ![PathRx desktop app, defining the groups](docs/desktop.png)
 

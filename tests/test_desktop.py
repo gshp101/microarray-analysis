@@ -115,3 +115,11 @@ def test_window_flow(tmp_path, monkeypatch):
     assert w.status["sets"] == "locked" and w.status["report"] == "locked"
     w.close()
     qa.processEvents()
+
+
+def test_tutorial_opens_from_checkout():
+    pytest.importorskip("PySide6.QtCore", exc_type=ImportError)
+    from pathrx.desktop import app as A
+
+    url = A.tutorial_url()
+    assert url.isLocalFile() and url.toLocalFile().endswith("docs/tutorial.html")

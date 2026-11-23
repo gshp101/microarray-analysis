@@ -1,14 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
-  <rect x="64" y="64" width="896" height="896" rx="200" fill="#0f7c84"/>
-  <g stroke="#ffffff" stroke-opacity=".45" stroke-width="22" stroke-linecap="round">
-    <line x1="300" y1="300" x2="520" y2="250"/><line x1="300" y1="300" x2="330" y2="540"/>
-    <line x1="520" y1="250" x2="740" y2="360"/><line x1="330" y1="540" x2="560" y2="520"/>
-    <line x1="740" y1="360" x2="700" y2="620"/><line x1="560" y1="520" x2="700" y2="620"/>
-    <line x1="330" y1="540" x2="420" y2="760"/><line x1="560" y1="520" x2="420" y2="760"/>
-    <line x1="700" y1="620" x2="680" y2="790"/>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#13909a"/><stop offset="1" stop-color="#0a5960"/></linearGradient>
+    <clipPath id="half"><rect x="512" y="0" width="600" height="1024"/></clipPath></defs>
+  <rect x="64" y="64" width="896" height="896" rx="200" fill="url(#bg)"/>
+  <g transform="rotate(-40 512 512)">
+    <!-- capsule: red half solid, white half holds the array -->
+    <rect x="182" y="372" width="660" height="280" rx="140" fill="#ffffff"/>
+    <path d="M512 372 H322 a140 140 0 0 0 0 280 H512 Z" fill="#e2493d"/>
+    <g>
+      <circle cx="585" cy="462" r="32" fill="#f26b5f"/><circle cx="670" cy="462" r="32" fill="#c9d6da"/><circle cx="755" cy="462" r="32" fill="#7fb0ff"/>
+      <circle cx="585" cy="562" r="32" fill="#7fb0ff"/><circle cx="670" cy="562" r="32" fill="#f26b5f"/><circle cx="755" cy="562" r="32" fill="#f26b5f"/>
+    </g>
+    <rect x="182" y="372" width="660" height="280" rx="140" fill="none" stroke="#0a5960" stroke-width="22"/>
+    <line x1="512" y1="372" x2="512" y2="652" stroke="#0a5960" stroke-width="18"/>
   </g>
-  <!-- highlighted affected route -->
-  <path d="M300 300 L330 540 L560 520 L700 620" fill="none" stroke="#ffd3cc" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
-  <g fill="#ffffff"><circle cx="520" cy="250" r="44"/><circle cx="740" cy="360" r="44"/><circle cx="420" cy="760" r="44"/><circle cx="680" cy="790" r="38"/></g>
-  <g fill="#f26b5f" stroke="#ffffff" stroke-width="16"><circle cx="300" cy="300" r="62"/><circle cx="330" cy="540" r="62"/><circle cx="560" cy="520" r="62"/><circle cx="700" cy="620" r="62"/></g>
 </svg>

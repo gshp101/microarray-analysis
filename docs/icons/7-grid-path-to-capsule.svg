@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#13909a"/><stop offset="1" stop-color="#0a5960"/></linearGradient></defs>
+  <rect x="64" y="64" width="896" height="896" rx="200" fill="url(#bg)"/>
+  <g>
+    <circle cx="230" cy="230" r="40" fill="#fff" opacity=".28"/><circle cx="370" cy="230" r="40" fill="#f26b5f"/><circle cx="510" cy="230" r="40" fill="#fff" opacity=".28"/><circle cx="650" cy="230" r="40" fill="#7fb0ff"/><circle cx="790" cy="230" r="40" fill="#fff" opacity=".28"/>
+    <circle cx="230" cy="370" r="40" fill="#7fb0ff"/><circle cx="370" cy="370" r="40" fill="#f26b5f"/><circle cx="510" cy="370" r="40" fill="#fff" opacity=".28"/><circle cx="650" cy="370" r="40" fill="#fff" opacity=".28"/><circle cx="790" cy="370" r="40" fill="#7fb0ff"/>
+    <circle cx="230" cy="510" r="40" fill="#fff" opacity=".28"/><circle cx="370" cy="510" r="40" fill="#f26b5f"/><circle cx="510" cy="510" r="40" fill="#f26b5f"/><circle cx="650" cy="510" r="40" fill="#fff" opacity=".28"/><circle cx="790" cy="510" r="40" fill="#fff" opacity=".28"/>
+  </g>
+  <!-- pathway threading the up spots, ending at the capsule -->
+  <path d="M370 190 V510 H510 V650" fill="none" stroke="#ffffff" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- horizontal capsule at the bottom -->
+  <rect x="250" y="680" width="520" height="170" rx="85" fill="#ffffff"/>
+  <path d="M510 680 H335 a85 85 0 0 0 0 170 H510 Z" fill="#e2493d"/>
+  <rect x="250" y="680" width="520" height="170" rx="85" fill="none" stroke="#0a5960" stroke-width="20"/>
+  <line x1="510" y1="680" x2="510" y2="850" stroke="#0a5960" stroke-width="16"/>
+</svg>
