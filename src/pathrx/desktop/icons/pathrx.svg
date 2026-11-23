@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <rect x="64" y="64" width="896" height="896" rx="200" fill="#0f7c84"/>
+  <g stroke="#ffffff" stroke-opacity=".45" stroke-width="22" stroke-linecap="round">
+    <line x1="300" y1="300" x2="520" y2="250"/><line x1="300" y1="300" x2="330" y2="540"/>
+    <line x1="520" y1="250" x2="740" y2="360"/><line x1="330" y1="540" x2="560" y2="520"/>
+    <line x1="740" y1="360" x2="700" y2="620"/><line x1="560" y1="520" x2="700" y2="620"/>
+    <line x1="330" y1="540" x2="420" y2="760"/><line x1="560" y1="520" x2="420" y2="760"/>
+    <line x1="700" y1="620" x2="680" y2="790"/>
+  </g>
+  <!-- highlighted affected route -->
+  <path d="M300 300 L330 540 L560 520 L700 620" fill="none" stroke="#ffd3cc" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+  <g fill="#ffffff"><circle cx="520" cy="250" r="44"/><circle cx="740" cy="360" r="44"/><circle cx="420" cy="760" r="44"/><circle cx="680" cy="790" r="38"/></g>
+  <g fill="#f26b5f" stroke="#ffffff" stroke-width="16"><circle cx="300" cy="300" r="62"/><circle cx="330" cy="540" r="62"/><circle cx="560" cy="520" r="62"/><circle cx="700" cy="620" r="62"/></g>
+</svg>

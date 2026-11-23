@@ -28,6 +28,7 @@ class DatasetSpec:
     reference: str = ""
     tags: tuple[str, ...] = field(default_factory=tuple)
     lineage: str | None = None  # tissue of matching cancer cell lines in DepMap/CCLE, e.g. "LUNG"
+    name: str = ""  # short display name for the apps, e.g. "Liver cancer (HCC)"
 
 
 DATASETS: dict[str, DatasetSpec] = {
@@ -35,6 +36,7 @@ DATASETS: dict[str, DatasetSpec] = {
     for spec in [
         DatasetSpec(
             key="alzheimers_brain",
+            name="Alzheimer's brain",
             accession="GSE5281",
             description="Alzheimer's disease vs non-demented control brain, laser-captured "
                         "neurons from six regions (Affymetrix HG-U133 Plus 2.0)",
@@ -48,6 +50,7 @@ DATASETS: dict[str, DatasetSpec] = {
         ),
         DatasetSpec(
             key="lung_adenocarcinoma",
+            name="Lung adenocarcinoma",
             accession="GSE10072",
             description="Lung adenocarcinoma vs non-tumor lung tissue from smokers and "
                         "never smokers (Affymetrix HG-U133A)",
@@ -63,6 +66,7 @@ DATASETS: dict[str, DatasetSpec] = {
         ),
         DatasetSpec(
             key="breast_cancer",
+            name="Breast cancer",
             accession="GSE15852",
             description="Breast tumor vs paired adjacent normal tissue "
                         "(Affymetrix HG-U133A)",
@@ -77,6 +81,7 @@ DATASETS: dict[str, DatasetSpec] = {
         ),
         DatasetSpec(
             key="colorectal_cancer",
+            name="Colorectal cancer",
             accession="GSE32323",
             description="Colorectal cancer vs paired normal colon tissue; cell line "
                         "samples excluded (Affymetrix HG-U133 Plus 2.0)",
@@ -92,6 +97,7 @@ DATASETS: dict[str, DatasetSpec] = {
         ),
         DatasetSpec(
             key="alzheimers_aging_brain",
+            name="Alzheimer's, aging brain",
             accession="GSE48350",
             description="Alzheimer's disease vs cognitively intact controls aged 60 and over, "
                         "four brain regions (hippocampus, entorhinal cortex, superior frontal "
@@ -112,6 +118,7 @@ DATASETS: dict[str, DatasetSpec] = {
         ),
         DatasetSpec(
             key="liver_cancer",
+            name="Liver cancer (HCC)",
             accession="GSE14520",
             description="Hepatocellular carcinoma vs paired non-tumor liver tissue, main "
                         "cohort (Affymetrix HT HG-U133A, GPL3921)",
