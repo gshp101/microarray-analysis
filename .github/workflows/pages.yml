@@ -5,7 +5,7 @@ name: Web app (GitHub Pages)
 on:
   push:
     branches: [main]
-    paths: ["web/**", "src/pathrx/**", ".github/workflows/pages.yml"]
+    paths: ["web/**", "src/pathrx/**", "docs/tutorial.html", ".github/workflows/pages.yml"]
   workflow_dispatch:
 
 permissions:

@@ -30,6 +30,13 @@ from .widgets import Chips, Figure, Stats, TableView, Worker, clear, group_color
 
 ICON = Path(__file__).with_name("icons") / "pathrx.png"
 APP = "PathRx"
+TUTORIAL_URL = "https://gshp101.github.io/microarray-analysis/tutorial.html"
+
+
+def tutorial_url() -> QUrl:
+    """The step-by-step tutorial: the repository's copy when running from a checkout, else the web app's."""
+    local = Path(__file__).resolve().parents[3] / "docs" / "tutorial.html"
+    return QUrl.fromLocalFile(str(local)) if local.exists() else QUrl(TUTORIAL_URL)
 
 
 @dataclass(frozen=True)
@@ -289,6 +296,11 @@ class MainWindow(QMainWindow):
         b2.setWordWrap(True)
         bl.addWidget(b1)
         bl.addWidget(b2)
+        tut = QLabel("<a href='#'>Read the tutorial</a>")
+        tut.setToolTip("The whole pipeline worked through on a liver cancer study (F1)")
+        tut.linkActivated.connect(lambda _: self.open_tutorial())
+        bl.addSpacing(6)
+        bl.addWidget(tut)
         sl.addWidget(brand)
         self.nav = QListWidget()
         self.nav.setObjectName("sidebar")
@@ -361,6 +373,10 @@ class MainWindow(QMainWindow):
         a.triggered.connect(self.close)
         m.addAction(a)
         h = self.menuBar().addMenu("&Help")
+        a = QAction("Tutorial", self)
+        a.setShortcut(QKeySequence.HelpContents)
+        a.triggered.connect(self.open_tutorial)
+        h.addAction(a)
         a = QAction("About PathRx", self)
         a.triggered.connect(self.about)
         h.addAction(a)
@@ -915,6 +931,24 @@ class MainWindow(QMainWindow):
             self.settings.setValue("cache", str(self.session.cache_dir))
             self.settings.setValue("results", str(self.session.out_root))
             self._show_where()
+
+    def open_tutorial(self):
+        """Show the tutorial in its own window (or the browser without Qt WebEngine)."""
+        url = tutorial_url()
+        try:
+            from PySide6.QtWebEngineWidgets import QWebEngineView
+        except ImportError:
+            QDesktopServices.openUrl(url)
+            return
+        if getattr(self, "_tutorial", None) is None:
+            self._tutorial = QWebEngineView()
+            self._tutorial.setWindowTitle("PathRx tutorial")
+            self._tutorial.setWindowIcon(self.windowIcon())
+            self._tutorial.resize(1100, 900)
+            self._tutorial.load(url)
+        self._tutorial.show()
+        self._tutorial.raise_()
+        self._tutorial.activateWindow()
 
     def about(self):
         QMessageBox.about(self, "About PathRx",
