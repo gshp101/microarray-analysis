@@ -74,3 +74,45 @@ def top_pathways(gsea: pd.DataFrame, path: str | Path, title: str = "", n: int =
     fig.savefig(path)
     plt.close(fig)
     return Path(path)
+
+
+def sample_distributions(expr: pd.DataFrame, groups: pd.Series | None = None, title: str = "",
+                         path: str | Path | None = None, max_samples: int = 120):
+    """Box plot of each sample's values (thinned to `max_samples`), colored by group if given.
+
+    Saves to `path` when given; returns the matplotlib figure (closed if saved)."""
+    cols = list(expr.columns)
+    if len(cols) > max_samples:
+        cols = cols[:: int(np.ceil(len(cols) / max_samples))]
+    data = [expr[c].dropna().to_numpy() for c in cols]
+    palette = {0: UP, 1: DOWN}
+    names = list(dict.fromkeys(groups.dropna())) if groups is not None else []
+    colors = []
+    for c in cols:
+        g = groups.get(c) if groups is not None else None
+        colors.append(palette.get(names.index(g), NEUTRAL) if g in names else NEUTRAL)
+    fig, ax = plt.subplots(figsize=(8, 3.2), dpi=120)
+    _style(ax)
+    bp = ax.boxplot(data, showfliers=False, patch_artist=True, widths=0.7)
+    for patch, col in zip(bp["boxes"], colors):
+        patch.set_facecolor(col)
+        patch.set_edgecolor(MUTED)
+        patch.set_linewidth(0.4)
+    for k in ("whiskers", "caps", "medians"):
+        for line in bp[k]:
+            line.set_color(MUTED)
+            line.set_linewidth(0.5)
+    ax.set_xticks([])
+    ax.set_xlabel(f"{len(cols)} samples" + (f" (every {len(expr.columns) // len(cols)}th shown)"
+                                            if len(cols) < len(expr.columns) else ""), color=INK, fontsize=9)
+    ax.set_ylabel("expression", color=INK, fontsize=9)
+    ax.set_title(title, loc="left", fontsize=10, color=INK)
+    if names:
+        from matplotlib.patches import Patch
+        ax.legend(handles=[Patch(color=palette[i], label=n) for i, n in enumerate(names[:2])],
+                  frameon=False, fontsize=8, loc="upper right")
+    fig.tight_layout()
+    if path is not None:
+        fig.savefig(path)
+        plt.close(fig)
+    return fig

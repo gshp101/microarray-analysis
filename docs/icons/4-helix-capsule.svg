@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <rect x="64" y="64" width="896" height="896" rx="200" fill="#f6f8f8"/>
+  <rect x="64" y="64" width="896" height="896" rx="200" fill="none" stroke="#d6e0e3" stroke-width="8"/>
+  <!-- helix (expression) on the left -->
+  <g fill="none" stroke-width="34" stroke-linecap="round">
+    <path d="M250 230 C 420 330, 420 430, 250 530 S 80 730, 250 830" stroke="#0f7c84"/>
+    <path d="M420 230 C 250 330, 250 430, 420 530 S 590 730, 420 830" stroke="#2f6fd0"/>
+  </g>
+  <g stroke="#566a73" stroke-width="16" stroke-linecap="round" opacity=".6">
+    <line x1="285" y1="290" x2="385" y2="290"/><line x1="290" y1="470" x2="380" y2="470"/><line x1="285" y1="590" x2="385" y2="590"/><line x1="290" y1="770" x2="380" y2="770"/>
+  </g>
+  <!-- capsule (drug) on the right, tilted -->
+  <g transform="rotate(-35 690 560)">
+    <rect x="590" y="330" width="200" height="460" rx="100" fill="#ffffff" stroke="#14232b" stroke-width="20"/>
+    <path d="M590 560 V430 a100 100 0 0 1 200 0 V560 Z" fill="#d1453b"/>
+    <rect x="590" y="330" width="200" height="460" rx="100" fill="none" stroke="#14232b" stroke-width="20"/>
+    <line x1="590" y1="560" x2="790" y2="560" stroke="#14232b" stroke-width="20"/>
+  </g>
+</svg>

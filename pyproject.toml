@@ -9,9 +9,13 @@ dependencies = ["gseapy", "matplotlib", "numpy", "pandas", "requests", "scipy", 
 
 [project.optional-dependencies]
 dev = ["pytest"]
+desktop = ["PySide6>=6.5"]
 
 [project.scripts]
 pathrx = "pathrx.cli:main"
+
+[project.gui-scripts]
+pathrx-desktop = "pathrx.desktop.app:main"
 
 [build-system]
 requires = ["setuptools>=77"]
@@ -21,7 +25,7 @@ build-backend = "setuptools.build_meta"
 where = ["src"]
 
 [tool.setuptools.package-data]
-pathrx = ["benchmarks/*.tsv"]
+pathrx = ["benchmarks/*.tsv", "desktop/icons/*"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

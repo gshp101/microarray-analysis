@@ -36,7 +36,7 @@ if "requests" not in sys.modules:
     def _no_requests(*_a, **_k):
         raise RuntimeError("network calls in the browser go through pathrx_web.download")
 
-    _req.HTTPError, _req.get = HTTPError, _no_requests
+    _req.HTTPError, _req.ConnectionError, _req.get = HTTPError, ConnectionError, _no_requests
     sys.modules["requests"] = _req
 
 import numpy as np
@@ -163,9 +163,6 @@ def dumps(obj) -> str:
 
 # ------------------------------------------------------------ step 1: load a GEO series
 
-META_PREFIXES = ("title", "source_name", "characteristics", "description")
-
-
 async def list_platforms(gse: str) -> str:
     """Series matrix files of a GSE, one per platform."""
     gse = gse.strip().upper()
@@ -203,14 +200,8 @@ async def load_series(gse: str, url: str) -> str:
     single = int(((mapped != "") & ~mapped.str.contains("///")).sum())
     vals = expr.to_numpy(dtype=float)
     q = np.nanquantile(vals, [0, 0.25, 0.5, 0.75, 0.99, 1.0])
-    meta_cols = [c for c in samples.columns if c.startswith(META_PREFIXES)]
-    meta = samples[meta_cols].fillna("")
-    # columns whose values repeat are the useful ones for defining groups
-    fields = []
-    for c in meta_cols:
-        counts = meta[c].value_counts()
-        if 1 < len(counts) <= 12 or (len(counts) == 1 and c.startswith("characteristics")):
-            fields.append({"column": c, "values": [[str(k), int(v)] for k, v in counts.items()]})
+    meta = samples[[c for c in samples.columns if c.startswith(geo.META_PREFIXES)]].fillna("")
+    fields = [{"column": c, "values": [list(v) for v in vals]} for c, vals in geo.metadata_fields(samples)]
     return dumps({
         "accession": gse, "platform": gpl, "samples": int(expr.shape[1]), "probes": int(expr.shape[0]),
         "mapped_probes": single, "symbol_source": sym_source,
@@ -221,40 +212,8 @@ async def load_series(gse: str, url: str) -> str:
     })
 
 
-def _distribution_plot(expr: pd.DataFrame, groups: pd.Series | None, title: str, max_samples: int = 120) -> str:
-    import matplotlib.pyplot as plt
-    cols = list(expr.columns)
-    if len(cols) > max_samples:
-        cols = cols[:: int(np.ceil(len(cols) / max_samples))]
-    data = [expr[c].dropna().to_numpy() for c in cols]
-    colors = []
-    palette = {0: plots.UP, 1: plots.DOWN}
-    names = list(dict.fromkeys(groups.dropna())) if groups is not None else []
-    for c in cols:
-        g = groups.get(c) if groups is not None else None
-        colors.append(palette.get(names.index(g), plots.NEUTRAL) if g in names else plots.NEUTRAL)
-    fig, ax = plt.subplots(figsize=(8, 3.2), dpi=120)
-    plots._style(ax)
-    bp = ax.boxplot(data, showfliers=False, patch_artist=True, widths=0.7)
-    for patch, col in zip(bp["boxes"], colors):
-        patch.set_facecolor(col)
-        patch.set_edgecolor(plots.MUTED)
-        patch.set_linewidth(0.4)
-    for k in ("whiskers", "caps", "medians"):
-        for line in bp[k]:
-            line.set_color(plots.MUTED)
-            line.set_linewidth(0.5)
-    ax.set_xticks([])
-    ax.set_xlabel(f"{len(cols)} samples" + (f" (every {len(expr.columns) // len(cols)}th shown)"
-                                            if len(cols) < len(expr.columns) else ""), color=plots.INK, fontsize=9)
-    ax.set_ylabel("expression", color=plots.INK, fontsize=9)
-    ax.set_title(title, loc="left", fontsize=10, color=plots.INK)
-    if names:
-        from matplotlib.patches import Patch
-        ax.legend(handles=[Patch(color=palette[i], label=n) for i, n in enumerate(names[:2])],
-                  frameon=False, fontsize=8, loc="upper right")
-    fig.tight_layout()
-    return fig_png(fig)
+def _distribution_plot(expr: pd.DataFrame, groups: pd.Series | None, title: str) -> str:
+    return fig_png(plots.sample_distributions(expr, groups, title))
 
 
 # ------------------------------------------------------------ step 2: groups
@@ -274,21 +233,10 @@ def preview_groups(case_name: str, case_rx: str, control_name: str, control_rx: 
     samples = STATE["raw_samples"]
     try:
         rules = _rules(case_name, case_rx, control_name, control_rx)
-        text = geo.sample_text(samples)
-        keep = pd.Series(True, index=samples.index)
-        if sample_filter:
-            keep &= text.str.contains(sample_filter, case=False, regex=True)
-        if exclude:
-            keep &= ~text.str.contains(exclude, case=False, regex=True)
-        group = geo.assign_groups(samples, rules) if case_rx and control_rx else pd.Series(np.nan, index=samples.index)
-        hits = pd.DataFrame({g: text.str.contains(rx, case=False, regex=True) if rx else False
-                             for g, rx in rules.items()})
+        status = geo.group_status(samples, rules, sample_filter, exclude)
     except (re.error, ValueError) as e:
         return dumps({"error": str(e)})
-    both = hits.sum(axis=1) > 1
-    status = np.where(~keep, "filtered out", np.where(both, "matches both", group.fillna("unassigned")))
-    counts = pd.Series(status).value_counts().to_dict()
-    return dumps({"status": dict(zip(samples.index, status)), "counts": counts})
+    return dumps({"status": status.to_dict(), "counts": status.value_counts().to_dict()})
 
 
 def apply_groups(case_name: str, case_rx: str, control_name: str, control_rx: str,

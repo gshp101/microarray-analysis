@@ -13,6 +13,7 @@ from __future__ import annotations
 import gzip
 import io
 import re
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -66,17 +67,54 @@ def _prefix_dir(acc: str) -> str:
     return f"{kind}{num[:-3]}nnn"
 
 
+RETRY_STATUS = {403, 429, 500, 502, 503, 504}  # NCBI answers 403 now and then under load
+
+
+def cache_file(url: str, cache_dir: Path = DEFAULT_CACHE) -> Path:
+    """Where fetch() keeps the body of `url`."""
+    return cache_dir / re.sub(r"[^A-Za-z0-9._-]", "_", url.split("://", 1)[-1])
+
+
+def get(url: str, timeout: int = 300, retries: int = 3, progress=None) -> bytes:
+    """GET a URL with retries on transient errors. `progress(loaded, total)` is called
+    while the body streams in (total is 0 when the server does not say)."""
+    for attempt in range(retries + 1):
+        try:
+            resp = requests.get(url, timeout=timeout, stream=progress is not None)
+        except requests.ConnectionError:
+            if attempt >= retries:
+                raise
+        else:
+            if resp.ok or resp.status_code not in RETRY_STATUS or attempt >= retries:
+                break
+        time.sleep(1.5 * 2 ** attempt)
+    resp.raise_for_status()
+    if progress is None:
+        return resp.content
+    total = int(resp.headers.get("Content-Length") or 0)
+    chunks, loaded = [], 0
+    for chunk in resp.iter_content(1 << 16):
+        chunks.append(chunk)
+        loaded += len(chunk)
+        progress(loaded, total)
+    return b"".join(chunks)
+
+
+def download(url: str, cache_dir: Path = DEFAULT_CACHE, timeout: int = 300, progress=None) -> Path:
+    """Make sure `url` is in the cache (raw bytes, still gzipped if it is); return the file."""
+    cached = cache_file(url, cache_dir)
+    if not cached.exists():
+        data = get(url, timeout=timeout, progress=progress)
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        tmp = cached.with_name(cached.name + ".part")
+        tmp.write_bytes(data)
+        tmp.replace(cached)
+    return cached
+
+
 def fetch(url: str, cache_dir: Path = DEFAULT_CACHE, timeout: int = 300) -> bytes:
     """GET a URL, caching the body on disk. Transparently gunzips .gz files."""
-    cache_dir.mkdir(parents=True, exist_ok=True)
-    cached = cache_dir / re.sub(r"[^A-Za-z0-9._-]", "_", url.split("://", 1)[-1])
-    if cached.exists():
-        data = cached.read_bytes()
-    else:
-        resp = requests.get(url, timeout=timeout)
-        resp.raise_for_status()
-        data = resp.content
-        cached.write_bytes(data)
+    data = download(url, cache_dir, timeout).read_bytes()
     if url.endswith(".gz") or data[:2] == b"\x1f\x8b":
         data = gzip.decompress(data)
     return data
@@ -85,9 +123,8 @@ def fetch(url: str, cache_dir: Path = DEFAULT_CACHE, timeout: int = 300) -> byte
 def series_matrix_urls(gse: str, cache_dir: Path = DEFAULT_CACHE) -> list[str]:
     """List the series matrix files for a GSE (one per platform)."""
     base = f"{GEO_FTP}/series/{_prefix_dir(gse)}/{gse}/matrix/"
-    listing = requests.get(base, timeout=60)
-    listing.raise_for_status()
-    names = sorted(set(re.findall(r'href="([^"]+_series_matrix\.txt\.gz)"', listing.text)))
+    listing = get(base, timeout=60).decode("utf-8", "replace")
+    names = sorted(set(re.findall(r'href="([^"]+_series_matrix\.txt\.gz)"', listing)))
     if not names:
         raise FileNotFoundError(f"no series matrix files under {base}")
     return [base + n for n in names]
@@ -232,6 +269,43 @@ def assign_groups(samples: pd.DataFrame, rules: dict[str, str]) -> pd.Series:
     single = hits.sum(axis=1) == 1
     group[single] = hits[single].idxmax(axis=1)
     return group
+
+
+META_PREFIXES = ("title", "source_name", "characteristics", "description")
+
+
+def metadata_fields(samples: pd.DataFrame, max_values: int = 12) -> list[tuple[str, list[tuple[str, int]]]]:
+    """Metadata columns whose values repeat across samples (the useful ones for defining
+    groups), each with its values and how many samples have them."""
+    cols = [c for c in samples.columns if c.startswith(META_PREFIXES)]
+    meta = samples[cols].fillna("")
+    out = []
+    for c in cols:
+        counts = meta[c].value_counts()
+        if 1 < len(counts) <= max_values or (len(counts) == 1 and c.startswith("characteristics")):
+            out.append((c, [(str(k), int(v)) for k, v in counts.items()]))
+    return out
+
+
+def group_status(samples: pd.DataFrame, rules: dict[str, str], sample_filter: str | None = None,
+                 exclude: str | None = None) -> pd.Series:
+    """What build_dataset() would do with each sample: its group name, "unassigned",
+    "matches both" or "filtered out". Raises re.error on a bad pattern."""
+    for rx in [*rules.values(), sample_filter or "", exclude or ""]:
+        re.compile(rx)
+    text = sample_text(samples)
+    keep = pd.Series(True, index=samples.index)
+    if sample_filter:
+        keep &= text.str.contains(sample_filter, case=False, regex=True)
+    if exclude:
+        keep &= ~text.str.contains(exclude, case=False, regex=True)
+    active = {g: rx for g, rx in rules.items() if rx}
+    hits = pd.DataFrame({g: text.str.contains(rx, case=False, regex=True) for g, rx in active.items()},
+                        index=samples.index)
+    group = assign_groups(samples, rules) if len(active) == len(rules) else pd.Series(np.nan, index=samples.index)
+    both = hits.sum(axis=1) > 1
+    return pd.Series(np.where(~keep, "filtered out", np.where(both, "matches both", group.fillna("unassigned"))),
+                     index=samples.index)
 
 
 def load_table(expression: str | Path, samples: str | Path, name: str | None = None) -> ExpressionDataset:

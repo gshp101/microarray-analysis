@@ -30,13 +30,10 @@ def presets() -> list[dict]:
     sys.modules[spec_.name] = datasets
     spec_.loader.exec_module(datasets)
 
-    names = {"alzheimers_brain": "Alzheimer's brain", "alzheimers_aging_brain": "Alzheimer's, aging brain",
-             "lung_adenocarcinoma": "Lung adenocarcinoma", "breast_cancer": "Breast cancer",
-             "colorectal_cancer": "Colorectal cancer", "liver_cancer": "Liver cancer (HCC)"}
     out = []
     for spec in datasets.DATASETS.values():
         out.append({"key": spec.key, "accession": spec.accession,
-                    "name": names.get(spec.key, spec.key.replace("_", " ").capitalize()),
+                    "name": spec.name or spec.key.replace("_", " ").capitalize(),
                     "description": spec.description, "case": spec.case, "control": spec.control,
                     "rules": spec.rules, "platform": spec.platform, "sample_filter": spec.sample_filter,
                     "exclude": spec.exclude, "lineage": spec.lineage, "expected": spec.expected})
@@ -49,7 +46,8 @@ def build(out: Path) -> Path:
         shutil.copy2(WEB / name, out / name)
     with zipfile.ZipFile(out / "pathrx.zip", "w", zipfile.ZIP_DEFLATED) as z:
         for f in sorted(PKG.rglob("*")):
-            if f.is_file() and "__pycache__" not in f.parts and f.suffix in (".py", ".tsv"):
+            if (f.is_file() and not {"__pycache__", "desktop"} & set(f.relative_to(PKG).parts)
+                    and f.suffix in (".py", ".tsv")):
                 z.write(f, Path("pathrx") / f.relative_to(PKG))
         z.write(WEB / "pathrx_web.py", "pathrx_web.py")
     (out / "presets.json").write_text(json.dumps(presets(), indent=1))

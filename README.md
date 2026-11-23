@@ -18,6 +18,25 @@ network proximity and DepMap, with the tables and plots of each step. `python we
 runs it locally with KEGG included; on a static host such as GitHub Pages, KEGG-based steps
 need a small proxy (see web/README.md).
 
+## Desktop app
+
+The same step-by-step flow as the web app, as a native Qt window (PySide6). It runs the
+pathrx package directly, so KEGG and gseapy work with no proxy and results match the command
+line.
+
+    pip install -e ".[desktop]"
+    pathrx-desktop                    # or: python -m pathrx.desktop
+
+Search GEO (or pick a curated study), label the two groups with a live preview of which
+samples fall where, then run the ten steps one at a time and look at each table and plot:
+loading, groups, differential expression, gene sets, pathway scoring (GSEA and ORA), drug
+leads, network proximity, DepMap dependencies and the HTML report, shown in the app. Every
+table can be filtered, sorted and saved as TSV. Outputs go to `~/PathRx results/<GSE>/`
+in the same layout as `pathrx report` (change it under File > Settings); downloads share the
+command line's cache. Icon options are in [docs/icons/](docs/icons/).
+
+![PathRx desktop app, defining the groups](docs/desktop.png)
+
 ## Status
 
 - Step 1 (load datasets): done; all six curated datasets load with the group sizes
